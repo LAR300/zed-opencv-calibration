@@ -5,6 +5,8 @@
 #include <sl/Camera.hpp>
 #include <sl/CameraOne.hpp>
 
+#include "aprilgrid.hpp"
+
 // *********************************************************************************
 // CHANGE THIS PARAMS USING THE COMMAND LINE OPTIONS
 // Learn more:
@@ -176,6 +178,11 @@ struct Args {
     int left_camera_sn = -1;
     int right_camera_sn = -1;
     std::string calib_opencv_file;  // optional: passed to InitParameters
+    std::string target_yaml;        // optional: Kalibr AprilGrid target file
+    std::string detector_params_file;  // optional: AprilGrid detector parameters
+    int min_tags = DEFAULT_MIN_TAGS;
+    int min_rows = DEFAULT_MIN_TAG_ROWS;
+    int min_cols = DEFAULT_MIN_TAG_COLS;
 
     void parse(int argc, char* argv[]) {
         app_name = argv[0];
@@ -203,6 +210,16 @@ struct Args {
                 square_size = std::stof(argv[++i]);
             } else if (arg == "--calib_opencv" && i + 1 < argc) {
                 calib_opencv_file = argv[++i];
+            } else if (arg == "--target_yaml" && i + 1 < argc) {
+                target_yaml = argv[++i];
+            } else if (arg == "--detector_params" && i + 1 < argc) {
+                detector_params_file = argv[++i];
+            } else if (arg == "--min_tags" && i + 1 < argc) {
+                min_tags = std::stoi(argv[++i]);
+            } else if (arg == "--min_rows" && i + 1 < argc) {
+                min_rows = std::stoi(argv[++i]);
+            } else if (arg == "--min_cols" && i + 1 < argc) {
+                min_cols = std::stoi(argv[++i]);
             } else if (arg == "--help" || arg == "-h") {
                 std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
                 std::cout << "  --calib_opencv <file>  Path to an OpenCV YAML calibration file" << std::endl;
@@ -210,6 +227,14 @@ struct Args {
                 std::cout << "  --h_edges <value>      Number of horizontal inner edges of the checkerboard" << std::endl;
                 std::cout << "  --v_edges <value>      Number of vertical inner edges of the checkerboard" << std::endl;
                 std::cout << "  --square_size <value>  Size of a square in the checkerboard (in mm)" << std::endl;
+                std::cout << "  --target_yaml <file>   Kalibr AprilGrid target file (replaces the checkerboard)" << std::endl;
+                std::cout << "  --detector_params <file> OpenCV YAML file with AprilGrid detector parameters" << std::endl;
+                std::cout << "  --min_tags <value>     Minimum number of AprilGrid tags for a valid view (default "
+                          << DEFAULT_MIN_TAGS << ")" << std::endl;
+                std::cout << "  --min_rows <value>     Minimum number of tag rows for a valid view (default "
+                          << DEFAULT_MIN_TAG_ROWS << ")" << std::endl;
+                std::cout << "  --min_cols <value>     Minimum number of tag columns for a valid view (default "
+                          << DEFAULT_MIN_TAG_COLS << ")" << std::endl;
                 std::cout << "  --svo <file>           Path to the SVO file" << std::endl;
                 std::cout << "  --fisheye              Use fisheye lens model" << std::endl;
                 std::cout << "  --virtual              Use ZED X One cameras as a virtual stereo pair" << std::endl;
@@ -223,6 +248,8 @@ struct Args {
                 std::cout << "  " << argv[0] << std::endl;
                 std::cout << std::endl << "* ZED Stereo Camera with an OpenCV calibration file:" << std::endl;
                 std::cout << "  " << argv[0] << " --calib_opencv zed_calibration_12345678.yml" << std::endl;
+                std::cout << std::endl << "* ZED Stereo Camera with a Kalibr AprilGrid target:" << std::endl;
+                std::cout << "  " << argv[0] << " --target_yaml target.yaml" << std::endl;
                 std::cout << std::endl << "* Virtual Stereo Camera using serial numbers:" << std::endl;
                 std::cout << "  " << argv[0]
                           << " --virtual --left_sn 301528071 --right_sn 300473441"
@@ -243,11 +270,35 @@ int main(int argc, char* argv[]) {
     args.parse(argc, argv);
 
     std::cout << "*** Stereo Calibration Checker ***" << std::endl << std::endl;
-    std::cout << " * Expected checkerboard features:" << std::endl;
-    std::cout << "   - Inner horizontal edges:\t" << h_edges << std::endl;
-    std::cout << "   - Inner vertical edges:\t" << v_edges << std::endl;
-    std::cout << "   - Square size:\t\t" << square_size << " mm" << std::endl;
-    std::cout << "Change these parameters using the command line options if needed. Use '-h' for help." << std::endl << std::endl;
+
+    // ---- Calibration target: checkerboard (default) or Kalibr AprilGrid ----
+    const bool use_aprilgrid = !args.target_yaml.empty();
+    AprilGridTarget target;
+    auto detector_params = defaultDetectorParameters();
+    if (use_aprilgrid) {
+        std::string error, warning;
+        if (!loadKalibrTarget(args.target_yaml, target, error)) {
+            std::cerr << "Error: " << error << std::endl;
+            return EXIT_FAILURE;
+        }
+        if (!args.detector_params_file.empty()) {
+            if (!loadDetectorParameters(args.detector_params_file, detector_params, error, warning)) {
+                std::cerr << "Error: " << error << std::endl;
+                return EXIT_FAILURE;
+            }
+            if (!warning.empty()) std::cerr << "Warning: " << warning << std::endl;
+        }
+        std::cout << " * Target file: " << args.target_yaml << std::endl;
+        printAprilGridTarget(target);
+        std::cout << " * Minimum per view: " << args.min_tags << " tags over " << args.min_rows
+                  << " rows and " << args.min_cols << " columns" << std::endl << std::endl;
+    } else {
+        std::cout << " * Expected checkerboard features:" << std::endl;
+        std::cout << "   - Inner horizontal edges:\t" << h_edges << std::endl;
+        std::cout << "   - Inner vertical edges:\t" << v_edges << std::endl;
+        std::cout << "   - Square size:\t\t" << square_size << " mm" << std::endl;
+        std::cout << "Change these parameters using the command line options if needed. Use '-h' for help." << std::endl << std::endl;
+    }
 
     // ---- ZED camera initialization (mirrors stereo_calibration) ----
     sl::Camera zed_camera;
@@ -353,7 +404,8 @@ int main(int argc, char* argv[]) {
     // target temporarily disappears
     double disp_left = -1.0, disp_right = -1.0, disp_stereo = -1.0;
 
-    std::cout << "Point the camera at the checkerboard. Press 'q' or ESC to quit." << std::endl;
+    std::cout << "Point the camera at the " << (use_aprilgrid ? "AprilGrid" : "checkerboard")
+              << ". Press 'q' or ESC to quit." << std::endl;
 
     char key = ' ';
     while (1) {
@@ -373,8 +425,10 @@ int main(int argc, char* argv[]) {
         cv::resize(rgb_r, rgb_d_r, display_size);
 
         std::vector<cv::Point2f> pts_l_d, pts_r_d;
-        bool found_l = cv::findChessboardCorners(rgb_d_l, cv::Size(h_edges, v_edges), pts_l_d);
-        bool found_r = cv::findChessboardCorners(rgb_d_r, cv::Size(h_edges, v_edges), pts_r_d);
+        bool found_l = !use_aprilgrid &&
+                       cv::findChessboardCorners(rgb_d_l, cv::Size(h_edges, v_edges), pts_l_d);
+        bool found_r = !use_aprilgrid &&
+                       cv::findChessboardCorners(rgb_d_r, cv::Size(h_edges, v_edges), pts_r_d);
 
         double err_left = -1.0, err_right = -1.0, err_stereo = -1.0;
 
@@ -430,9 +484,49 @@ int main(int argc, char* argv[]) {
                                       cv::Mat(pts_r_d), found_r);
         }
 
+        // ---- AprilGrid detection on full resolution images ----
+        // Left/Right use all the tags of each camera; Stereo needs enough tags
+        // seen by both cameras (decisions.md D8)
+        std::vector<cv::Point3f> obj_pts_r = obj_pts;
+        bool stereo_valid = found_l && found_r;
+        if (use_aprilgrid) {
+            auto tags_l = detectAprilGrid(rgb_l, target, detector_params);
+            auto tags_r = detectAprilGrid(rgb_r, target, detector_params);
+
+            std::vector<cv::Point3f> obj_pts_l;
+            auto ids_l = tagCorrespondences(target, tags_l, obj_pts_l, pts_l_f);
+            auto ids_r = tagCorrespondences(target, tags_r, obj_pts_r, pts_r_f);
+
+            std::vector<cv::Point3f> obj_common;
+            std::vector<cv::Point2f> common_l, common_r;
+            auto ids_common = matchCommonTags(target, tags_l, tags_r, obj_common, common_l, common_r);
+
+            std::string reason;
+            found_l = meetsMinimum(target, ids_l, args.min_tags, args.min_rows, args.min_cols, reason);
+            found_r = meetsMinimum(target, ids_r, args.min_tags, args.min_rows, args.min_cols, reason);
+            stereo_valid = found_l && found_r &&
+                           meetsMinimum(target, ids_common, args.min_tags, args.min_rows, args.min_cols, reason);
+
+            if (found_l && computePose(obj_pts_l, pts_l_f, calib.K_left, calib.D_left,
+                                       calib.is_fisheye, rvec_l, tvec_l)) {
+                err_left = computeReprojError(obj_pts_l, pts_l_f, rvec_l, tvec_l,
+                                             calib.K_left, calib.D_left, calib.is_fisheye);
+            }
+
+            cv::Mat rvec_r_ind, tvec_r_ind;
+            if (found_r && computePose(obj_pts_r, pts_r_f, calib.K_right, calib.D_right,
+                                       calib.is_fisheye, rvec_r_ind, tvec_r_ind)) {
+                err_right = computeReprojError(obj_pts_r, pts_r_f, rvec_r_ind, tvec_r_ind,
+                                              calib.K_right, calib.D_right, calib.is_fisheye);
+            }
+
+            drawAprilGridDetections(rgb_d_l, tags_l, full_size);
+            drawAprilGridDetections(rgb_d_r, tags_r, full_size);
+        }
+
         // Stereo reprojection error: uses left pose + stereo extrinsics (R, T)
         // to predict right image corners — tests the extrinsic calibration
-        if (found_l && found_r && err_left >= 0.0) {
+        if (stereo_valid && err_left >= 0.0) {
             cv::Mat R_l, R_r, t_r, rvec_r_stereo;
             cv::Rodrigues(rvec_l, R_l);
             R_r = calib.R * R_l;
@@ -440,7 +534,7 @@ int main(int argc, char* argv[]) {
             cv::Rodrigues(R_r, rvec_r_stereo);
 
             double err_right_from_stereo =
-                computeReprojError(obj_pts, pts_r_f, rvec_r_stereo, t_r,
+                computeReprojError(obj_pts_r, pts_r_f, rvec_r_stereo, t_r,
                                    calib.K_right, calib.D_right, calib.is_fisheye);
 
             // Combined stereo RMS (same formula as in stereo calibration)
@@ -456,7 +550,7 @@ int main(int argc, char* argv[]) {
         // Reset stored values when the target disappears
         if (!found_l) disp_left = -1.0;
         if (!found_r) disp_right = -1.0;
-        if (!found_l || !found_r) disp_stereo = -1.0;
+        if (!stereo_valid) disp_stereo = -1.0;
 
         // ---- Draw error values directly on the images ----
         drawErrorText(rgb_d_l, "Left reproj.", disp_left, cv::Point(10, 35));

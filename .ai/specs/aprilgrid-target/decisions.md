@@ -149,6 +149,11 @@
   refino dos cantos (`SUBPIX` ou `APRILTAG`), a principal alavanca se o RMS ficar alto.
   - *Descartado:* uma flag por parâmetro, que seria uma dúzia de flags.
 - **Consequências:** `markerBorderBits` é sempre forçado a 2 (D5).
+- **Ajuste na implementação (etapa 5):** `readDetectorParameters` **não existe** no OpenCV 4.5.4 do
+  container; ele só aparece a partir da 4.6/4.7. O arquivo continua no mesmo formato e com os mesmos
+  nomes de campo de `cv::aruco::DetectorParameters`, mas é lido campo a campo com
+  `cv::FileStorage`. Um campo desconhecido gera aviso, porque pode ser erro de digitação, e um
+  campo não numérico gera erro.
 
 ### D10. Testes automatizados opcionais, sem dependência nova
 
@@ -170,3 +175,37 @@
 - **Consequências:** a imagem sintética usa a **nossa** convenção, então prova a consistência
   interna, não a do Kalibr. A do Kalibr é provada pelo portão de D5, com o alvo real. O que depende
   de câmera continua com verificação manual.
+
+### D11. Refinar os cantos no cruzamento em X e separar as tags dos quadradinhos do Kalibr
+
+- **Contexto:** o portão da etapa 8 falhou em precisão. A convenção estava certa. O diagnóstico com
+  19 pares crus está no `scratch.md`. Os quadradinhos pretos do Kalibr tocam as quinas das tags, e o
+  detector do OpenCV, que acha as tags pelo contorno das manchas pretas, junta tag e quadradinho
+  quando o fio cinza entre eles é classificado como preto. De longe a tag deixa de ser detectada; de
+  perto o canto sai ~5 px para dentro, e o `CORNER_REFINE_SUBPIX` com janela 5 não chega ao
+  cruzamento. O teste sintético da etapa 6 não pegava isso porque desenhava um fio branco perfeito.
+- **Decisão:**
+  1. O ArUco só **localiza e decodifica** as tags (`CORNER_REFINE_NONE` por padrão). Cada canto é
+     depois refinado com `cv::cornerSubPix` na **imagem original**, numa janela de meia-largura
+     `max(2, round(0,15 × menor lado da tag))`. A janela alcança o cruzamento em X com o quadradinho
+     e não chega aos bits de dados, que começam a 0,2 × lado. Esse refino roda sempre, qualquer que
+     seja o `cornerRefinementMethod`, porque é ele que ancora o canto no cruzamento.
+  2. `adaptiveThreshConstant` padrão passa de 7 para **25**, para que o fio cinza volte a ser
+     branco e as manchas se separem.
+- **Por quê:** testado nos 19 pares com a calibração de fábrica fixa:
+  - vistas com ≥ 12 tags: de 18/38 para 34/38;
+  - RMS por vista (mediana / máximo): de 0,54 / 1,35 px para 0,44 / 0,61 px;
+  - cantos acima de 1,5 px: de 24 para 3.
+
+  A autocalibração com essa detecção dá 0,33 px, com os intrínsecos a ≤ 0,3 % da fábrica. É o mesmo
+  princípio do Kalibr: detectar de forma aproximada e refinar no cruzamento.
+  - *Descartado:* erodir o preto antes da detecção, que derrubou para 5/38 vistas.
+  - *Descartado:* `CORNER_REFINE_APRILTAG`, que detecta 0–2 tags nestas imagens.
+  - *Descartado:* só subir o C, sem o refino, porque os cantos de perto continuam deslocados.
+- **Consequências:**
+  - os padrões de D9 mudam: `adaptiveThreshConstant` 25 e `cornerRefinementMethod` NONE;
+  - a etapa 6 ganha um teste sintético com quadradinhos encostados, tags pequenas e borrão, que
+    reproduz o problema;
+  - o portão da etapa 8 passa a exigir Left/Right < 0,5 px nas poses médias e longas e nenhuma pose
+    acima de 0,7 px. De perto, a fábrica sozinha fica em ~0,5–0,6 px. O critério da spec
+    (etapa 12) não muda.

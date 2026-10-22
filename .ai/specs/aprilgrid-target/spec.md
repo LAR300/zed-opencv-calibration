@@ -146,30 +146,30 @@ por um `target.yaml`, e o usa em outras etapas de calibração.
 
 ## Critérios de aceitação
 
-- [ ] **Sem regressão no xadrez.** `zed_stereo_calibration --use_stored_values --square_size 23.8`
+- [x] **Sem regressão no xadrez.** `zed_stereo_calibration --use_stored_values --square_size 23.8`
       sobre as imagens de `../calib_runs/2026-10-16_ar_9x6/zed-images/` reproduz a linha de base:
       RMS 0,237 / 0,238 / 0,254 px e baseline 120,04 mm, iguais nas casas impressas.
-- [ ] **Calibração AprilGrid no ar** com a ZED 2i S/N 35180697, em HD720:
-  - [ ] RMS Left, Right e Stereo < 0,5 px;
-  - [ ] fx e fy das duas câmeras a **≤ 0,5 %** do resultado do xadrez **e** da fábrica;
-  - [ ] baseline a **≤ 0,5 %** de 120,04 mm (xadrez) **e** de 119,98 mm (fábrica);
-  - [ ] cx e cy reportados na comparação, sem limite de aprovação.
-- [ ] **A vista parcial é aceita.** Pelo menos uma amostra aceita tem parte do alvo fora do quadro, e
+- [x] **Calibração AprilGrid no ar** com a ZED 2i S/N 35180697, em HD720:
+  - [x] RMS Left, Right e Stereo < 0,5 px;
+  - [x] fx e fy das duas câmeras a **≤ 0,5 %** do resultado do xadrez **e** da fábrica;
+  - [x] baseline a **≤ 0,5 %** de 120,04 mm (xadrez) **e** de 119,98 mm (fábrica);
+  - [x] cx e cy reportados na comparação, sem limite de aprovação.
+- [x] **A vista parcial é aceita.** Pelo menos uma amostra aceita tem parte do alvo fora do quadro, e
       a coleta chega a 100 % nas quatro métricas ou ao máximo de amostras.
-- [ ] **O mínimo é respeitado.** Uma amostra com menos de 12 tags comuns, ou com tags numa única
+- [x] **O mínimo é respeitado.** Uma amostra com menos de 12 tags comuns, ou com tags numa única
       linha ou coluna, é recusada com a mensagem de R8.
-- [ ] **A numeração está correta.** Na visualização ao vivo, os IDs desenhados batem com a folha
+- [x] **A numeração está correta.** Na visualização ao vivo, os IDs desenhados batem com a folha
       impressa, conferidos visualmente pelo usuário.
-- [ ] **O recálculo é reproduzível.** `--use_stored_values --target_yaml` sobre as imagens da
+- [x] **O recálculo é reproduzível.** `--use_stored_values --target_yaml` sobre as imagens da
       execução AprilGrid reproduz o resultado da captura ao vivo.
 - [ ] **O checker funciona com AprilGrid.** Com a calibração de fábrica, o checker mostra Stereo
       < 0,5 px nas poses testadas, na mesma faixa obtida com o xadrez (0,25–0,51 px).
-- [ ] **Erros de entrada são claros.** `target.yaml` inexistente, sem campo obrigatório ou com
+- [x] **Erros de entrada são claros.** `target.yaml` inexistente, sem campo obrigatório ou com
       `target_type` diferente de `aprilgrid` encerra com mensagem clara e código de saída diferente
       de zero.
-- [ ] **O build não quebra.** As cinco ferramentas compilam no container. `--fisheye` e `--virtual`
+- [x] **O build não quebra.** As cinco ferramentas compilam no container. `--fisheye` e `--virtual`
       combinados com `--target_yaml` são aceitos pelo parse de argumentos.
-- [ ] **O README está atualizado** conforme R17.
+- [x] **O README está atualizado** conforme R17.
 
 ## Perguntas em aberto
 

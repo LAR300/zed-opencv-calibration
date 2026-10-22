@@ -6,6 +6,8 @@
 #include <sl/Camera.hpp>
 #include <sl/CameraOne.hpp>
 
+#include "aprilgrid.hpp"
+
 constexpr int MIN_IMAGE = 20;
 
 struct CameraCalib {
@@ -229,4 +231,5 @@ int calibrate(int img_count, const std::string &folder, StereoCalib &raw_data,
               int h_edges, int v_edges, double square_size, int serial,
               bool is_dual_mono, bool is_4k, bool save_calib_mono = false,
               bool use_intrinsic_prior = false, double max_repr_error = 0.5f,
-              bool verbose = false);
+              bool verbose = false,
+              const AprilGridOptions *aprilgrid = nullptr);  // nullptr: checkerboard

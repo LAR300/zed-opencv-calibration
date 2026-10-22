@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <sstream>
 
+#include "aprilgrid.hpp"
 #include "calibration_checker.hpp"
 #include "opencv_calibration.hpp"
 
@@ -35,6 +36,8 @@ void addNewCheckerboardPosition(cv::Mat& coverage_indicator,
                                 bool draw_rect);
 void addNewCheckerboardPoly(cv::Mat& coverage_indicator,
                             const std::vector<cv::Point2f>& pts_l);
+void addNewTargetPoly(cv::Mat& coverage_indicator,
+                      const std::vector<cv::Point2f>& outside_corners);
 void applyCoverageIndicatorOverlay(cv::Mat& image,
                                    const cv::Mat& coverage_indicator,
                                    const cv::Mat& limits_indicator);
@@ -95,6 +98,11 @@ struct Args {
   int left_camera_sn = -1;
   int right_camera_sn = -1;
   bool use_stored_images = false;
+  std::string target_yaml;           // Kalibr AprilGrid target file
+  std::string detector_params_file;  // AprilGrid detector parameters
+  int min_tags = DEFAULT_MIN_TAGS;
+  int min_rows = DEFAULT_MIN_TAG_ROWS;
+  int min_cols = DEFAULT_MIN_TAG_COLS;
 
   void parse(int argc, char* argv[]) {
     app_name = argv[0];
@@ -122,6 +130,16 @@ struct Args {
         square_size = std::stof(argv[++i]);
       } else if (arg == "--use_stored_values") {
         use_stored_images = true;
+      } else if (arg == "--target_yaml" && i + 1 < argc) {
+        target_yaml = argv[++i];
+      } else if (arg == "--detector_params" && i + 1 < argc) {
+        detector_params_file = argv[++i];
+      } else if (arg == "--min_tags" && i + 1 < argc) {
+        min_tags = std::stoi(argv[++i]);
+      } else if (arg == "--min_rows" && i + 1 < argc) {
+        min_rows = std::stoi(argv[++i]);
+      } else if (arg == "--min_cols" && i + 1 < argc) {
+        min_cols = std::stoi(argv[++i]);
       } else if (arg == "--help" || arg == "-h") {
         std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
         std::cout << "  --h_edges <value>      Number of horizontal inner "
@@ -132,6 +150,24 @@ struct Args {
                   << std::endl;
         std::cout << "  --square_size <value>  Size of a square in the "
                      "checkerboard (in mm)"
+                  << std::endl;
+        std::cout << "  --target_yaml <file>   Kalibr AprilGrid target file "
+                     "(replaces the checkerboard)."
+                  << std::endl;
+        std::cout << "  --detector_params <file> OpenCV YAML file with AprilGrid "
+                     "detector parameters."
+                  << std::endl;
+        std::cout << "  --min_tags <value>     Minimum AprilGrid tags seen in "
+                     "both images (default "
+                  << DEFAULT_MIN_TAGS << ")." << std::endl;
+        std::cout << "  --min_rows <value>     Minimum tag rows seen in both "
+                     "images (default "
+                  << DEFAULT_MIN_TAG_ROWS << ")." << std::endl;
+        std::cout << "  --min_cols <value>     Minimum tag columns seen in both "
+                     "images (default "
+                  << DEFAULT_MIN_TAG_COLS << ")." << std::endl;
+        std::cout << "  --use_stored_values    Recompute the calibration from "
+                     "the images stored in 'zed-images/'."
                   << std::endl;
         std::cout << "  --svo <file>      Path to the SVO file." << std::endl;
         std::cout << "  --fisheye         Use fisheye lens model." << std::endl;
@@ -156,6 +192,11 @@ struct Args {
         std::cout << std::endl
                   << "* ZED Stereo Camera using an SVO file:" << std::endl;
         std::cout << "  " << argv[0] << " --svo camera.svo" << std::endl;
+        std::cout << std::endl
+                  << "* ZED Stereo Camera with a Kalibr AprilGrid target:"
+                  << std::endl;
+        std::cout << "  " << argv[0] << " --target_yaml target.yaml"
+                  << std::endl;
         std::cout << std::endl
                   << "* Virtual Stereo Camera using camera IDs:" << std::endl;
         std::cout << "  " << argv[0] << " --virtual --left_id 0 --right_id 1"
@@ -202,16 +243,49 @@ int main(int argc, char* argv[]) {
 
   std::cout << "*** Stereo Camera Calibration Tool ***" << std::endl;
   std::cout << std::endl;
-  std::cout << "The calibration process requires a checkerboard of known "
-               "characteristics."
-            << std::endl;
-  std::cout << " * Expected checkerboard features:" << std::endl;
-  std::cout << "   - Inner horizontal edges:\t" << h_edges << std::endl;
-  std::cout << "   - Inner vertical edges:\t" << v_edges << std::endl;
-  std::cout << "   - Square size:\t\t" << square_size << " mm" << std::endl;
-  std::cout << "Change these parameters using the command line options if "
-               "needed. Use the '-h' option for help."
-            << std::endl;
+
+  // Calibration target: checkerboard (default) or Kalibr AprilGrid
+  const bool use_aprilgrid = !args.target_yaml.empty();
+  AprilGridOptions aprilgrid;
+  if (use_aprilgrid) {
+    std::string error, warning;
+    if (!loadKalibrTarget(args.target_yaml, aprilgrid.target, error)) {
+      std::cerr << "Error: " << error << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (!args.detector_params_file.empty()) {
+      if (!loadDetectorParameters(args.detector_params_file,
+                                  aprilgrid.detector_params, error, warning)) {
+        std::cerr << "Error: " << error << std::endl;
+        return EXIT_FAILURE;
+      }
+      if (!warning.empty()) std::cerr << "Warning: " << warning << std::endl;
+    }
+    aprilgrid.min_tags = args.min_tags;
+    aprilgrid.min_rows = args.min_rows;
+    aprilgrid.min_cols = args.min_cols;
+
+    std::cout << "The calibration process requires an AprilGrid of known "
+                 "characteristics."
+              << std::endl;
+    std::cout << " * Target file: " << args.target_yaml << std::endl;
+    printAprilGridTarget(aprilgrid.target);
+    std::cout << " * Minimum per sample: " << aprilgrid.min_tags
+              << " tags seen in both images, over " << aprilgrid.min_rows
+              << " rows and " << aprilgrid.min_cols << " columns"
+              << std::endl;
+  } else {
+    std::cout << "The calibration process requires a checkerboard of known "
+                 "characteristics."
+              << std::endl;
+    std::cout << " * Expected checkerboard features:" << std::endl;
+    std::cout << "   - Inner horizontal edges:\t" << h_edges << std::endl;
+    std::cout << "   - Inner vertical edges:\t" << v_edges << std::endl;
+    std::cout << "   - Square size:\t\t" << square_size << " mm" << std::endl;
+    std::cout << "Change these parameters using the command line options if "
+                 "needed. Use the '-h' option for help."
+              << std::endl;
+  }
   std::cout << std::endl;
 
   // Initialize the calibration checker
@@ -423,6 +497,7 @@ int main(int argc, char* argv[]) {
     char key = ' ';
     // bool coverage_mode = false;
     bool missing_target_on_last_pics = false;
+    std::string missing_tags_reason;  // AprilGrid: why the last sample failed
     bool low_target_variability_on_last_pics = false;
     bool blurry_images = false;
 
@@ -456,15 +531,42 @@ int main(int argc, char* argv[]) {
         std::vector<cv::Point2f> pts_l, pts_r;
         bool found_l = false;
         bool found_r = false;
-        found_l =
-            cv::findChessboardCorners(rgb_d, cv::Size(h_edges, v_edges), pts_l);
-        drawChessboardCorners(rgb_d_fill, cv::Size(h_edges, v_edges),
-                              cv::Mat(pts_l), found_l);
-        if (found_l) {
-          found_r = cv::findChessboardCorners(
-              rgb2_d, cv::Size(h_edges, v_edges), pts_r);
-          drawChessboardCorners(rgb2_d, cv::Size(h_edges, v_edges),
-                                cv::Mat(pts_r), found_r);
+
+        // AprilGrid: tags detected on the full resolution images; a sample
+        // needs enough tags seen by both cameras (decisions.md D7, D8)
+        TagDetections tags_l, tags_r, common_tags_l;
+        std::vector<cv::Point3f> tag_obj;
+        std::vector<cv::Point2f> tag_pts_l, tag_pts_r;
+        std::string tags_reason;
+        bool enough_tags = false;
+
+        if (use_aprilgrid) {
+          tags_l = detectAprilGrid(rgb_l, aprilgrid.target,
+                                   aprilgrid.detector_params);
+          tags_r = detectAprilGrid(rgb_r, aprilgrid.target,
+                                   aprilgrid.detector_params);
+          auto ids = matchCommonTags(aprilgrid.target, tags_l, tags_r, tag_obj,
+                                     tag_pts_l, tag_pts_r);
+          for (int id : ids) common_tags_l[id] = tags_l[id];
+          enough_tags = meetsMinimum(aprilgrid.target, ids, aprilgrid.min_tags,
+                                     aprilgrid.min_rows, aprilgrid.min_cols,
+                                     tags_reason);
+          found_l = !tags_l.empty();
+          found_r = !tags_r.empty();
+          cv::Size full_size(camera_resolution.width, camera_resolution.height);
+          drawAprilGridDetections(rgb_d_fill, tags_l, full_size);
+          drawAprilGridDetections(rgb2_d, tags_r, full_size);
+        } else {
+          found_l = cv::findChessboardCorners(rgb_d, cv::Size(h_edges, v_edges),
+                                              pts_l);
+          drawChessboardCorners(rgb_d_fill, cv::Size(h_edges, v_edges),
+                                cv::Mat(pts_l), found_l);
+          if (found_l) {
+            found_r = cv::findChessboardCorners(
+                rgb2_d, cv::Size(h_edges, v_edges), pts_r);
+            drawChessboardCorners(rgb2_d, cv::Size(h_edges, v_edges),
+                                  cv::Mat(pts_r), found_r);
+          }
         }
         
         if (image_stack_horizontal) {
@@ -499,7 +601,9 @@ int main(int argc, char* argv[]) {
 
           if (missing_target_on_last_pics) {
             cv::putText(
-                rendering_image, " * Missing target on one of the cameras.",
+                rendering_image,
+                use_aprilgrid ? " * Not enough tags: " + missing_tags_reason
+                              : " * Missing target on one of the cameras.",
                 cv::Point(display.size[1] / 2 - 20, display.size[0] + 315),
                 cv::FONT_HERSHEY_SIMPLEX, 0.75, warn_color, 2);
           }
@@ -669,17 +773,27 @@ int main(int argc, char* argv[]) {
         if ((key == 's' || key == 'S') || key == ' ') {
           std::cout << "*** New acquisition triggered ***" << std::endl;
 
-          missing_target_on_last_pics = !found_r || !found_l;
+          missing_target_on_last_pics =
+              use_aprilgrid ? !enough_tags : (!found_r || !found_l);
+          missing_tags_reason = tags_reason;
           blurry_images = false;
 
-          if (found_l && found_r) {
+          if (use_aprilgrid ? enough_tags : (found_l && found_r)) {
+            const cv::Size full_size(camera_resolution.width,
+                                     camera_resolution.height);
             auto scaled_pts_l = pts_l;
-            scaleKP(
-                pts_l, display_size,
-                cv::Size(camera_resolution.width, camera_resolution.height));
-            scaleKP(
-                pts_r, display_size,
-                cv::Size(camera_resolution.width, camera_resolution.height));
+            std::vector<cv::Point2f> outside_pts, display_outside_pts;
+            if (use_aprilgrid) {
+              // Coverage metrics from the region covered by the common tags
+              // (decisions.md D6)
+              pts_l = tag_pts_l;
+              outside_pts = outsideCorners(aprilgrid.target, common_tags_l);
+              display_outside_pts = outside_pts;
+              scaleKP(display_outside_pts, full_size, display_size);
+            } else {
+              scaleKP(pts_l, display_size, full_size);
+              scaleKP(pts_r, display_size, full_size);
+            }
 
             double sharpness_l = computeSharpness(rgb_l);
             double sharpness_r = computeSharpness(rgb_r);
@@ -690,8 +804,9 @@ int main(int argc, char* argv[]) {
                         << " R=" << sharpness_r
                         << ", min=" << min_sharpness << "). Hold still and retry."
                         << std::endl;
-            } else if (checker.testSample(pts_l, cv::Size(camera_resolution.width,
-                                                   camera_resolution.height))) {
+            } else if (use_aprilgrid
+                           ? checker.testSample(pts_l, outside_pts, full_size)
+                           : checker.testSample(pts_l, full_size)) {
               low_target_variability_on_last_pics = false;
 
               // saves the images
@@ -730,7 +845,10 @@ int main(int argc, char* argv[]) {
                                          limits_indicator, norm_x, norm_y,
                                          norm_size, min_bx, max_bx, min_by,
                                          max_by, (image_count >= 2));
-              addNewCheckerboardPoly(coverage_indicator, scaled_pts_l);
+              if (use_aprilgrid)
+                addNewTargetPoly(coverage_indicator, display_outside_pts);
+              else
+                addNewCheckerboardPoly(coverage_indicator, scaled_pts_l);
             } else {
               std::cout << "  ! Checkerboard detected, but sample not valid. "
                            "Please try again "
@@ -739,6 +857,9 @@ int main(int argc, char* argv[]) {
                         << std::endl;
               low_target_variability_on_last_pics = true;
             }
+          } else if (use_aprilgrid) {
+            std::cerr << "  ! Not enough AprilGrid tags: " << tags_reason
+                      << std::endl;
           } else {
             if (!found_l) {
               std::cerr << "  ! Checkerboard not detected in the LEFT image."
@@ -760,7 +881,8 @@ int main(int argc, char* argv[]) {
   int err =
       calibrate(image_count, image_folder, calib, h_edges, v_edges, square_size,
                 zed_info.serial_number, is_dual_mono_camera, is_4k_camera,
-                false, can_use_calib_prior, max_repr_error, verbose);
+                false, can_use_calib_prior, max_repr_error, verbose,
+                use_aprilgrid ? &aprilgrid : nullptr);
   if (err == EXIT_SUCCESS)
     std::cout << std::endl
               << " +++++ Calibration successful +++++" << std::endl;
@@ -864,16 +986,16 @@ void addNewCheckerboardPosition(cv::Mat& coverage_indicator,
 
 void addNewCheckerboardPoly(cv::Mat& coverage_indicator,
                             const std::vector<cv::Point2f>& pts_l) {
-  cv::Point tl = pts_l[0];
-  cv::Point tr = pts_l[h_edges - 1];
-  cv::Point br = pts_l[pts_l.size() - 1];
-  cv::Point bl = pts_l[pts_l.size() - h_edges];
+  std::vector<cv::Point2f> outside_corners = {
+      pts_l[0], pts_l[h_edges - 1], pts_l[pts_l.size() - 1],
+      pts_l[pts_l.size() - h_edges]};
+  addNewTargetPoly(coverage_indicator, outside_corners);
+}
 
+void addNewTargetPoly(cv::Mat& coverage_indicator,
+                      const std::vector<cv::Point2f>& outside_corners) {
   std::vector<cv::Point> poly_pts;
-  poly_pts.push_back(tl);
-  poly_pts.push_back(tr);
-  poly_pts.push_back(br);
-  poly_pts.push_back(bl);
+  for (const auto& corner : outside_corners) poly_pts.push_back(corner);
 
   cv::Mat mask = cv::Mat::zeros(coverage_indicator.size(), CV_8UC1);
   cv::fillPoly(mask, std::vector<std::vector<cv::Point>>{poly_pts},

@@ -37,7 +37,14 @@ CalibrationChecker::CalibrationChecker(cv::Size board_size, float square_size,
 
 bool CalibrationChecker::testSample(const std::vector<cv::Point2f>& corners,
                                     cv::Size image_size) {
-  DetectedBoardParams params = getDetectedBoardParams(corners, image_size);
+  return testSample(corners, get_outside_corners(corners), image_size);
+}
+
+bool CalibrationChecker::testSample(
+    const std::vector<cv::Point2f>& corners,
+    const std::vector<cv::Point2f>& outside_corners, cv::Size image_size) {
+  DetectedBoardParams params =
+      getDetectedBoardParams(corners, outside_corners, image_size);
 
   if (params.size < 0 || params.skew < 0) {
     std::cout << " * Sample rejected." << std::endl;
@@ -159,10 +166,10 @@ std::vector<cv::Point2f> CalibrationChecker::get_outside_corners(
 }
 
 DetectedBoardParams CalibrationChecker::getDetectedBoardParams(
-    const std::vector<cv::Point2f>& corners, cv::Size image_size) {
+    const std::vector<cv::Point2f>& corners,
+    const std::vector<cv::Point2f>& outside_corners, cv::Size image_size) {
   DetectedBoardParams params;
 
-  auto outside_corners = get_outside_corners(corners);
   float area = compute_area(outside_corners);
   float skew = compute_skew(outside_corners);
 

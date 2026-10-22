@@ -15,12 +15,13 @@ include_directories(${CUDA_INCLUDE_DIRS})
 include_directories(${ZED_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/aprilgrid)
 
 link_directories(${ZED_LIBRARY_DIR})
 link_directories(${OpenCV_LIBRARY_DIRS})
 link_directories(${CUDA_LIBRARY_DIRS})
 
-FILE(GLOB_RECURSE SRC_FILES "src/*.cpp")
+FILE(GLOB_RECURSE SRC_FILES "src/*.cpp" "../common/aprilgrid/*.cpp")
 FILE(GLOB_RECURSE HDR_FILES "include/*.hpp")
 ADD_EXECUTABLE(${PROJECT_NAME} ${HDR_FILES} ${SRC_FILES})
 

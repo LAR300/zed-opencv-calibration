@@ -8,7 +8,8 @@
 int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
               int h_edges, int v_edges, double square_size, int serial,
               bool is_dual_mono, bool is_4k, bool save_calib_mono,
-              bool use_intrinsic_prior, double max_repr_error, bool verbose) {
+              bool use_intrinsic_prior, double max_repr_error, bool verbose,
+              const AprilGridOptions* aprilgrid) {
   std::vector<cv::Mat> left_images, right_images;
 
   /// Read images
@@ -85,6 +86,31 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
   for (int i = 0; i < left_images.size(); i++) {
     std::cout << "." << std::flush;
     std::vector<cv::Point2f> pts_l_f, pts_r_f;
+
+    // AprilGrid: each pair keeps only the tags seen in both images
+    // (decisions.md D8)
+    if (aprilgrid) {
+      auto tags_l = detectAprilGrid(left_images.at(i), aprilgrid->target,
+                                    aprilgrid->detector_params);
+      auto tags_r = detectAprilGrid(right_images.at(i), aprilgrid->target,
+                                    aprilgrid->detector_params);
+      std::vector<cv::Point3f> obj_f;
+      auto ids = matchCommonTags(aprilgrid->target, tags_l, tags_r, obj_f,
+                                 pts_l_f, pts_r_f);
+      std::string reason;
+      if (meetsMinimum(aprilgrid->target, ids, aprilgrid->min_tags,
+                       aprilgrid->min_rows, aprilgrid->min_cols, reason)) {
+        pts_l.push_back(pts_l_f);
+        pts_r.push_back(pts_r_f);
+        object_points.push_back(obj_f);
+      } else {
+        std::cout << std::endl
+                  << "- No valid targets detected on frames #" << i << " ("
+                  << reason << ") -" << std::endl;
+      }
+      continue;
+    }
+
     bool found_l =
         cv::findChessboardCorners(left_images.at(i), t_size, pts_l_f, 3);
     bool found_r =

@@ -17,7 +17,7 @@ This project provides five main applications for working with ZED cameras:
 ### Dependencies
 
 - **ZED SDK** (version 5.1 or higher)
-- **OpenCV** (4.x recommended)
+- **OpenCV** (4.x recommended) with the `aruco` contrib module for the AprilGrid target (tested with 4.5.4)
 - **CUDA** (compatible with ZED SDK version)
 - **OpenGL libraries**:
   - GLEW
@@ -40,6 +40,15 @@ cd zed-opencv-calibration
 mkdir build && cd build
 cmake ..
 make -j$(nproc)
+```
+
+The AprilGrid support shared by the stereo tools lives in `common/aprilgrid/` (OpenCV only). Its unit
+tests need no camera and are built on demand:
+
+```bash
+cmake .. -DBUILD_TESTS=ON
+make -j$(nproc)
+ctest --output-on-failure
 ```
 
 ## Usage
@@ -189,6 +198,12 @@ Usage: ./zed_stereo_calibration [options]
   --h_edges <value>      Number of horizontal inner edges of the checkerboard
   --v_edges <value>      Number of vertical inner edges of the checkerboard
   --square_size <value>  Size of a square in the checkerboard (in mm)
+  --target_yaml <file>   Kalibr AprilGrid target file (replaces the checkerboard).
+  --detector_params <file> OpenCV YAML file with AprilGrid detector parameters.
+  --min_tags <value>     Minimum AprilGrid tags seen in both images (default 12).
+  --min_rows <value>     Minimum tag rows seen in both images (default 2).
+  --min_cols <value>     Minimum tag columns seen in both images (default 2).
+  --use_stored_values    Recompute the calibration from the images stored in 'zed-images/'.
   --svo <file>           Path to the SVO file.
   --fisheye              Use fisheye lens model.
   --virtual              Use ZED X One cameras as a virtual stereo pair.
@@ -222,6 +237,52 @@ Usage: ./zed_stereo_calibration [options]
 > ```bash
 > ZED_Explorer --all
 > ```
+
+#### AprilGrid Target (Kalibr)
+
+Instead of the checkerboard, the stereo tools accept a Kalibr AprilGrid (tag family `tag36h11`)
+described by the same `target.yaml` used with Kalibr:
+
+```yaml
+target_type: 'aprilgrid' #gridtype
+tagCols: 6               #number of apriltags
+tagRows: 6               #number of apriltags
+tagSize: 0.088           #size of apriltag, edge to edge [m]
+tagSpacing: 0.3          #ratio of space between tags to tagSize
+```
+
+```bash
+./zed_stereo_calibration --target_yaml target.yaml
+```
+
+- Each tag carries its own ID, so the target **does not need to be fully visible**: a sample is
+  valid when at least 12 tags, spread over at least 2 rows and 2 columns, are seen in both images
+  (`--min_tags`, `--min_rows`, `--min_cols`). Only the tags seen by both cameras are used for that
+  pair. Push the target partially out of the frame to cover the image borders and corners.
+- The detected tags are drawn with their IDs. With the board upright, tag 0 is bottom-left and the
+  IDs grow left to right, then bottom to top (Kalibr convention).
+- The tool prints the expected target dimensions at start-up. **Measure the printed target** (e.g.
+  from the left edge of the first tag to the left edge of the last one in a row): a printer scale
+  error does not show in the reprojection error, only in the baseline. Put the measured values in
+  the target file if they differ.
+- **Tilt the target**: at least half of the samples should be tilted by 30-45 deg, around both
+  axes at the same time (one corner of the board closer to the camera). Mostly fronto-parallel
+  samples leave the focal length poorly determined even with a low reprojection error. Aim for all
+  four metrics at 100% before the maximum sample count is reached.
+- Corners are refined on the X-junctions between the tags and the small Kalibr corner squares.
+  The detection can be tuned without recompiling with `--detector_params <file.yml>`, an OpenCV
+  YAML file using the field names of `cv::aruco::DetectorParameters` (unlisted fields keep the
+  defaults; `markerBorderBits` is always 2, as for Kalibr tags):
+
+  ```yaml
+  %YAML:1.0
+  ---
+  adaptiveThreshConstant: 25
+  minMarkerPerimeterRate: 0.02
+  ```
+
+- `--use_stored_values --target_yaml target.yaml` recomputes the calibration from the images saved
+  in `zed-images/`, without the camera.
 
 #### Calibration Process
 
@@ -338,6 +399,11 @@ Usage: ./zed_stereo_checker [options]
   --h_edges <value>      Number of horizontal inner edges of the checkerboard
   --v_edges <value>      Number of vertical inner edges of the checkerboard
   --square_size <value>  Size of a square in the checkerboard (in mm)
+  --target_yaml <file>   Kalibr AprilGrid target file (replaces the checkerboard)
+  --detector_params <file> OpenCV YAML file with AprilGrid detector parameters
+  --min_tags <value>     Minimum number of AprilGrid tags for a valid view (default 12)
+  --min_rows <value>     Minimum number of tag rows for a valid view (default 2)
+  --min_cols <value>     Minimum number of tag columns for a valid view (default 2)
   --svo <file>           Path to the SVO file
   --fisheye              Use fisheye lens model
   --virtual              Use ZED X One cameras as a virtual stereo pair
@@ -348,6 +414,10 @@ Usage: ./zed_stereo_checker [options]
   --help, -h             Show this help message
 ```
 
+With an AprilGrid (`--target_yaml`), the Left and Right errors use all the tags seen by each camera,
+and the Stereo error needs the minimum number of tags in both images. Views below the minimum show
+`N/A`.
+
 #### Stereo Checker Example Commands
 
 - Check the internal calibration of the default stereo camera:
@@ -357,6 +427,10 @@ Usage: ./zed_stereo_checker [options]
 - Evaluate a calibration file produced by `zed_stereo_calibration`:
 
   `./zed_stereo_checker --calib_opencv zed_calibration_SN12345678.yml`
+
+- Check the internal calibration with a Kalibr AprilGrid:
+
+  `./zed_stereo_checker --target_yaml target.yaml`
 
 - Virtual stereo rig using camera serial numbers:
 

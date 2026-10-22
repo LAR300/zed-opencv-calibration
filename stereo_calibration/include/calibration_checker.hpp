@@ -49,6 +49,12 @@ class CalibrationChecker {
   // Test if the detected corners form a valid sample
   bool testSample(const std::vector<cv::Point2f>& corners, cv::Size image_size);
 
+  // Same, with the 4 outside corners given explicitly (in cyclic order) for
+  // targets that can be partially visible, such as an AprilGrid
+  bool testSample(const std::vector<cv::Point2f>& corners,
+                  const std::vector<cv::Point2f>& outside_corners,
+                  cv::Size image_size);
+
   // Retrieve valid corners
   const std::vector<std::vector<cv::Point2f>>& getValidCorners() const {
     return validCorners_;
@@ -73,7 +79,8 @@ class CalibrationChecker {
  private:
   // Calculate the parameter of a detected checkerboard
   DetectedBoardParams getDetectedBoardParams(
-      const std::vector<cv::Point2f>& corners, cv::Size image_size);
+      const std::vector<cv::Point2f>& corners,
+      const std::vector<cv::Point2f>& outside_corners, cv::Size image_size);
 
   // Check if the detected corners are valid
   bool isGoodSample(const DetectedBoardParams& params);

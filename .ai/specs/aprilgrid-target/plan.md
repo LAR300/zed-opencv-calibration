@@ -17,12 +17,12 @@
 
 ### Fase A — linha de base e estrutura
 
-- [ ] 1. **Linha de base da regressão.** Antes de qualquer mudança, em `$RUN_DIR/regress_chess/`
+- [x] 1. **Linha de base da regressão.** Antes de qualquer mudança, em `$RUN_DIR/regress_chess/`
   (cópia de `zed-images/`): `zed_stereo_calibration --use_stored_values --square_size 23.8 | tee
   baseline.log`.
   - **Verificação:** `baseline.log` traz RMS 0,237077 / 0,238066 / 0,253679 e T_x −120,04 —
     iguais ao `results.md`. Guardar `zed_calibration_0.yml` como `baseline.yml`.
-- [ ] 2. **Esqueleto de testes** (D10): `option(BUILD_TESTS OFF)` no `CMakeLists.txt` raiz,
+- [x] 2. **Esqueleto de testes** (D10): `option(BUILD_TESTS OFF)` no `CMakeLists.txt` raiz,
   `tests/CMakeLists.txt` com executável `aprilgrid_tests` + `add_test`, macro `CHECK` mínima, um
   teste trivial.
   - **Verificação:** `cmake .. -DBUILD_TESTS=ON && make && ctest --output-on-failure` passa; build
@@ -30,30 +30,37 @@
 
 ### Fase B — módulo `common/aprilgrid` (TDD, sem câmera)
 
-- [ ] 3. **Leitura do `target.yaml`** (D3, D4; R2). `struct AprilGridTarget {rows, cols, tag_size_mm,
+- [x] 3. **Leitura do `target.yaml`** (D3, D4; R2). `struct AprilGridTarget {rows, cols, tag_size_mm,
   spacing_ratio}` + `bool loadKalibrTarget(path, AprilGridTarget&, std::string& error)`.
   - Testes primeiro: YAML válido do Kalibr (com comentários) → 6/6/88,0/0,3; arquivo inexistente;
     campo ausente; `target_type: 'checkerboard'`; `tagCols: 0`; `tagSize: 88` (guarda de unidade);
     `tagSpacing: 0`. Cada erro com mensagem específica.
   - **Verificação:** `ctest` verde.
-- [ ] 4. **Geometria dos pontos 3D** (D5). `tagCorners3D(id)` → 4 `cv::Point3f` em mm na convenção
+- [x] 4. **Geometria dos pontos 3D** (D5). `tagCorners3D(id)` → 4 `cv::Point3f` em mm na convenção
   Kalibr (IDs esquerda→direita, baixo→cima; cantos BR, BL, TL, TR; Y para cima); `rowOf(id)`,
   `colOf(id)`; dimensões físicas (pitch 114,4 mm; lado 660,0 mm).
   - Testes primeiro: cantos das tags 0, 5, 30 e 35; pitch; lado total; IDs fora do grid rejeitados.
   - **Verificação:** `ctest` verde.
-- [ ] 5. **Parâmetros do detector** (D9; R6). Padrões da referência; `--detector_params` lido por
+- [x] 5. **Parâmetros do detector** (D9; R6). Padrões da referência; `--detector_params` lido por
   `readDetectorParameters`; `markerBorderBits` forçado a 2 com aviso.
   - Testes primeiro: padrões; arquivo que altera `cornerRefinementMethod`; arquivo com
     `markerBorderBits: 1` → fica 2 + aviso; arquivo inválido → erro.
   - **Verificação:** `ctest` verde.
-- [ ] 6. **Detecção** (D7; R4, R5). `detectAprilGrid(gray, target, params)` → mapa
+- [x] 6. **Detecção** (D7; R4, R5). `detectAprilGrid(gray, target, params)` → mapa
   `id → 4 cantos 2D` só com IDs do grid e lado ≥ 10 px.
   - Teste primeiro: imagem sintética com as 36 tags desenhadas por `cv::aruco::drawMarker`
     (borda 2) na nossa convenção, com escala e rotação conhecidas → 36 IDs, cada canto a < 0,5 px
     do previsto; imagem com metade do alvo cortada → só as tags inteiras; tag de ID 40 colada →
     ignorada.
   - **Verificação:** `ctest` verde.
-- [ ] 7. **Cruzamento, regra do mínimo e cantos virtuais** (D6, D8; R7, R9, R11).
+- [x] 6b. **Refino no cruzamento em X** (D11). Aberta depois do portão da etapa 8.
+  - Teste primeiro: alvo sintético com os quadradinhos encostados nas tags, tags de ~40 px e
+    borrão, como na imagem real → falha com a detecção atual (RED); com a correção, ≥ 30 tags e
+    cantos a < 0,3 px; o teste de padrões passa a esperar `adaptiveThreshConstant` 25 e
+    `CORNER_REFINE_NONE`.
+  - **Verificação:** `ctest` verde; `calib_runs/tools/test_fix_c.py` (versão Python) e o C++ dão a
+    mesma taxa de detecção nos 19 pares crus.
+- [x] 7. **Cruzamento, regra do mínimo e cantos virtuais** (D6, D8; R7, R9, R11).
   - `matchCommonTags(det_l, det_r)` → `obj`, `img_l`, `img_r` alinhados, ordem por ID.
   - `meetsMinimum(ids, target, min_tags, min_rows, min_cols)` + motivo da recusa.
   - `outsideCorners(det, target)` → 4 cantos (UL, UR, DR, DL na imagem) do retângulo envolvente
@@ -65,7 +72,7 @@
 
 ### Fase C — checker (portão da convenção Kalibr)
 
-- [ ] 8. **`zed_stereo_checker` com AprilGrid** (D5, D8; R1–R3, R12, R14, R15).
+- [x] 8. **`zed_stereo_checker` com AprilGrid** (D5, D8; R1–R3, R12, R14, R15).
   `CMakeLists.txt` inclui `common/aprilgrid`; flags `--target_yaml`, `--detector_params`,
   `--min_tags`, `--min_rows`, `--min_cols` no `Args::parse` e no `--help`; impressão do alvo no
   lugar de "Expected checkerboard features"; laço com detecção em resolução cheia, Left/Right por
@@ -73,20 +80,21 @@
   (IDs visíveis) escalado para a tela. Caminho de xadrez sem alteração.
   - **Verificação (portão — não seguir se falhar):** com a calibração interna (de fábrica) e
     `target.yaml` do alvo, em ≥ 5 poses incluindo ≥ 2 com o alvo parcialmente fora do quadro:
-    Left e Right < 0,5 px e Stereo < 0,5 px; IDs desenhados batem com a placa; com < 12 tags o
+    Left e Right < 0,5 px nas poses de média e longa distância, e nenhuma pose acima de 0,7 px
+    (critério revisto em D11; de perto, a fábrica sozinha fica em ~0,5–0,6 px); IDs desenhados batem com a placa; com < 12 tags o
     erro não é exibido. Xadrez: rodar o checker com `--square_size 23.8` e conferir a mesma faixa
     de antes (0,25–0,51 px). Se Left/Right ficarem altos, diagnosticar a convenção (verbose com
     erro por tag) antes de prosseguir.
 
 ### Fase D — calibração
 
-- [ ] 9. **Métricas a partir de 4 cantos** (D6). Extrair de
+- [x] 9. **Métricas a partir de 4 cantos** (D6). Extrair de
   `CalibrationChecker::getDetectedBoardParams` a parte que recebe os 4 cantos externos;
   `testSample(corners, image_size)` do xadrez passa a chamá-la com `get_outside_corners`; nova
   sobrecarga `testSample(corners, outside_corners, image_size)` para o AprilGrid.
   - **Verificação:** etapa 1 de novo → `diff` do relatório com `baseline.log` vazio e
     `zed_calibration_0.yml` idêntico a `baseline.yml`.
-- [ ] 10. **`calibrate()` com AprilGrid** (D7, D8; R9, R13). Parâmetro opcional com o alvo
+- [x] 10. **`calibrate()` com AprilGrid** (D7, D8; R9, R13). Parâmetro opcional com o alvo
   (ausente = xadrez); no laço de detecção, ramo AprilGrid: detectar L e R, `matchCommonTags`,
   `meetsMinimum`, montar `object_points`/`pts_l`/`pts_r`; frame recusado reporta o motivo. Resto
   (mono, rejeição de outliers, estéreo, relatório, `.yml`) intocado.
@@ -111,13 +119,13 @@
     ≥ 1 amostra aceita com alvo parcial; recálculo reproduz o resultado ao vivo; checker com a
     fábrica dá Stereo < 0,5 px. Registrar a tabela de comparação no `results.md` (fora do controle
     de versão), em nova seção.
-- [ ] 13. **Erros de entrada pela CLI** (R2). `--target_yaml` inexistente, sem campo, com
+- [x] 13. **Erros de entrada pela CLI** (R2). `--target_yaml` inexistente, sem campo, com
   `target_type: 'checkerboard'`, com `tagSize: 88`, nas duas ferramentas.
   - **Verificação:** mensagem clara e `echo $?` ≠ 0, sem abrir a câmera.
-- [ ] 14. **`--fisheye` e `--virtual` com `--target_yaml`** (R15).
+- [x] 14. **`--fisheye` e `--virtual` com `--target_yaml`** (R15).
   - **Verificação:** o parse aceita as combinações, imprime o alvo e o modo e segue até a abertura
     da câmera (falha esperada em `--virtual` sem ZED X One, com a mensagem atual do SDK).
-- [ ] 15. **README** (R17). Seção "AprilGrid target" nas duas ferramentas: formato do
+- [x] 15. **README** (R17). Seção "AprilGrid target" nas duas ferramentas: formato do
   `target.yaml`, exemplos, mínimo de tags e flags, `--detector_params`, recomendação de medir o
   alvo impresso; nota sobre `common/` e `BUILD_TESTS`.
   - **Verificação:** os exemplos do README rodam como escritos (copiar e colar no container).
