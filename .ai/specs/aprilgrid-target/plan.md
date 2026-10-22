@@ -21,7 +21,7 @@
   (cópia de `zed-images/`): `zed_stereo_calibration --use_stored_values --square_size 23.8 | tee
   baseline.log`.
   - **Verificação:** `baseline.log` traz RMS 0,237077 / 0,238066 / 0,253679 e T_x −120,04 —
-    iguais ao `results.md`. Guardar `zed_calibration_0.yml` como `baseline.yml`.
+    iguais à Parte 1 de [`validation.md`](validation.md). Guardar `zed_calibration_0.yml` como `baseline.yml`.
 - [x] 2. **Esqueleto de testes** (D10): `option(BUILD_TESTS OFF)` no `CMakeLists.txt` raiz,
   `tests/CMakeLists.txt` com executável `aprilgrid_tests` + `add_test`, macro `CHECK` mínima, um
   teste trivial.
@@ -117,8 +117,8 @@
   - **Verificação:** RMS L/R/Stereo < 0,5 px; fx, fy (L e R) ≤ 0,5 % do xadrez (`baseline.yml`) **e**
     da fábrica (`SN35180697.conf`); baseline ≤ 0,5 % de 120,04 e de 119,98 mm; cx/cy reportados;
     ≥ 1 amostra aceita com alvo parcial; recálculo reproduz o resultado ao vivo; checker com a
-    fábrica dá Stereo < 0,5 px. Registrar a tabela de comparação no `results.md` (fora do controle
-    de versão), em nova seção.
+    fábrica dá Stereo < 0,5 px. Registrar a tabela de comparação na Parte 2 de
+    [`validation.md`](validation.md).
 - [x] 13. **Erros de entrada pela CLI** (R2). `--target_yaml` inexistente, sem campo, com
   `target_type: 'checkerboard'`, com `tagSize: 88`, nas duas ferramentas.
   - **Verificação:** mensagem clara e `echo $?` ≠ 0, sem abrir a câmera.

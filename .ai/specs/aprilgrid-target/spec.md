@@ -46,8 +46,8 @@ por um `target.yaml`, e o usa em outras etapas de calibração.
   `prj-minirov-petro-contrib-pkgs/petro_data_replayer/petro_data_replayer/calibrate_intrinsics.py`
   (`compute_aprilgrid_object_points`, `detect_aprilgrid`). Ela documenta a ordem de IDs e cantos
   "empiricamente verificada contra o board Kalibr real" e serve de referência.
-- Linha de base com xadrez já medida, no ar, com a ZED 2i S/N 35180697 em HD720 (`results.md`, fora
-  do controle de versão). Quadrado de 23,8 mm, 35 amostras.
+- Linha de base com xadrez já medida, no ar, com a ZED 2i S/N 35180697 em HD720 ([`validation.md`](validation.md),
+  Parte 1). Quadrado de 23,8 mm, 35 amostras.
 
   | Parâmetro | Fábrica | Xadrez |
   |---|---:|---:|
