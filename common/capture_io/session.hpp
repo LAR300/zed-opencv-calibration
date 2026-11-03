@@ -1,0 +1,55 @@
+#pragma once
+
+// Session file of the traceable capture mode (--session): what is captured,
+// where it is stored and under which conditions. OpenCV only (no ZED SDK) so
+// it can be unit tested without a camera.
+// Spec: .ai/specs/persistencia-captura/spec.md (R2, R3; section Formatos)
+
+#include <optional>
+#include <string>
+
+// Target dimensions measured with a caliper before the session (brief R7)
+struct TargetMeasured {
+  std::optional<double> tag_size_mm;
+  std::optional<double> tag_spacing_mm;
+  std::optional<double> planarity_mm;  // largest deviation from a plane
+  std::optional<std::string> measured_on;
+};
+
+// Flat port in front of the camera (brief R8); all null in air without a port
+struct PortGeometry {
+  bool present = false;
+  std::optional<std::string> material;
+  std::optional<double> thickness_mm;
+  std::optional<double> lens_to_port_mm;
+  std::optional<double> tilt_deg;
+  std::optional<double> refractive_index;
+};
+
+// Medium between the port and the target (brief R8)
+struct Medium {
+  std::string type;  // air | fresh_water | sea_water
+  std::optional<double> water_temperature_c;
+  std::optional<double> salinity_psu;
+  std::optional<double> refractive_index;
+};
+
+struct Session {
+  std::string output_root;
+  std::string condition;  // [A-Za-z0-9_-]+
+  int capture = 0;        // 1..99 -> captura_01..captura_99
+  std::string lens;
+  std::string note;
+  TargetMeasured target_measured;
+  PortGeometry port;
+  Medium medium;
+};
+
+// Read and validate a session file. Every field must be present; unknown
+// values are written 'null' (or '~'), never omitted. On failure 'error' names
+// the field, as 'section.field'.
+bool loadSession(const std::string& path, Session& session, std::string& error);
+
+// "captura_XX" and <output_root>/<condition>/captura_XX
+std::string captureDirName(const Session& session);
+std::string captureDir(const Session& session);

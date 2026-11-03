@@ -1,0 +1,35 @@
+# Session file for zed_stereo_calibration --session (traceable capture mode).
+# Spec: .ai/specs/persistencia-captura/spec.md
+#
+# Every field is mandatory. Write 'null' for what is unknown or does not apply (for example the port in
+# air without the acrylic); never leave a field out. Texts that start with a digit, such as dates and the
+# lens, must be quoted: cv::FileStorage would try to read them as numbers.
+#
+# The capture is written to <output_root>/<condition>/captura_<XX>/. The tool refuses to start if that
+# folder already exists and is not empty: nothing is ever overwritten or deleted.
+
+output_root: /workspaces/isaac_ros-dev/dev/calib_runs/dados
+condition: A_ar_sem_acrilico     # letters, digits, '_' and '-'
+capture: 1                       # 1..99 -> captura_01..captura_99
+lens: "2.1mm"
+note: ""
+
+target_measured:                 # caliper, before the session (brief R7)
+  tag_size_mm: 88.0
+  tag_spacing_mm: 26.4
+  planarity_mm: null             # largest deviation from a plane, mm
+  measured_on: "2026-11-03"
+
+port:                            # flat port in front of the camera (brief R8); null in air
+  present: false
+  material: null                 # e.g. PMMA
+  thickness_mm: null
+  lens_to_port_mm: null
+  tilt_deg: null
+  refractive_index: null         # >= 1
+
+medium:
+  type: air                      # air | fresh_water | sea_water
+  water_temperature_c: null
+  salinity_psu: null
+  refractive_index: null         # >= 1

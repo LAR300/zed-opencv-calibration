@@ -16,7 +16,18 @@
 
 ### Fase A — módulo puro `common/capture_io/` (TDD, sem câmera)
 
-- [ ] 1. **Leitura da sessão** (R2). `loadSession(path, Session&, error)` lê o YAML (com ou sem o
+- [x] 1. **Leitura da sessão** (R2). Feito em `common/capture_io/session.{hpp,cpp}`, testes em
+  `tests/test_session.cpp` (17 casos). Duas limitações do `cv::FileStorage` 4.5.4 apareceram e
+  foram tratadas:
+  - um valor que começa por dígito e não é número (`2.1mm`, `2026-11-03`) quebra a leitura, então
+    precisa de aspas; a mensagem de erro diz isso;
+  - um comentário no fim de um texto sem aspas vira parte do texto; os comentários são removidos
+    antes da leitura, respeitando as aspas.
+
+  Testes rodados com `cmake -S tests -B build/unit_tests && make -C build/unit_tests &&
+  build/unit_tests/aprilgrid_tests`: 80/80.
+
+  Especificação original da etapa: `loadSession(path, Session&, error)` lê o YAML (com ou sem o
   cabeçalho `%YAML`) e valida:
   - campos obrigatórios presentes;
   - `condition` em `[A-Za-z0-9_-]+`;
