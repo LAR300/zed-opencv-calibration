@@ -8,6 +8,7 @@
 #include "calibration_checker.hpp"
 #include "opencv_calibration.hpp"
 #include "sample_limits.hpp"
+#include "zed_camera_settings.hpp"
 
 static_assert(MIN_CALIBRATION_SAMPLES == MIN_IMAGE,
               "sample_limits.hpp must match the calibration minimum");
@@ -113,6 +114,7 @@ struct Args {
   int min_cols = DEFAULT_MIN_TAG_COLS;
   bool sample_limits_given = false;  // --min_samples or --max_samples passed
   std::string sample_limits_error;   // set when one of them is not a number
+  std::string camera_settings_file;  // capture settings to apply
 
   void parse(int argc, char* argv[]) {
     app_name = argv[0];
@@ -142,6 +144,8 @@ struct Args {
         use_stored_images = true;
       } else if (arg == "--target_yaml" && i + 1 < argc) {
         target_yaml = argv[++i];
+      } else if (arg == "--camera_settings" && i + 1 < argc) {
+        camera_settings_file = argv[++i];
       } else if (arg == "--detector_params" && i + 1 < argc) {
         detector_params_file = argv[++i];
       } else if (arg == "--min_tags" && i + 1 < argc) {
@@ -193,6 +197,10 @@ struct Args {
                   << COLLECTION_MAX_SAMPLES << ", 0 = no maximum)." << std::endl;
         std::cout << "  --use_stored_values    Recompute the calibration from "
                      "the images stored in 'zed-images/'."
+                  << std::endl;
+        std::cout << "  --camera_settings <file> YAML file with the capture "
+                     "settings to apply (exposure, gain, white balance...), "
+                     "restored on exit."
                   << std::endl;
         std::cout << "  --svo <file>      Path to the SVO file." << std::endl;
         std::cout << "  --fisheye         Use fisheye lens model." << std::endl;
@@ -333,6 +341,21 @@ int main(int argc, char* argv[]) {
               << (max_samples == 0 ? std::string("no maximum")
                                    : "max. " + std::to_string(max_samples))
               << std::endl;
+  }
+
+  // Capture settings file: read before opening the camera
+  std::vector<CameraSetting> camera_settings;
+  if (!args.camera_settings_file.empty()) {
+    std::string error;
+    if (!loadCameraSettings(args.camera_settings_file, camera_settings, error)) {
+      std::cerr << "Error: " << error << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (args.use_stored_images)
+      std::cout << " * --camera_settings has no effect with --use_stored_values: "
+                   "the stored images were taken with the settings printed in "
+                   "the log of their capture."
+                << std::endl;
   }
 
   // Initialize the calibration checker. Its maximum is unlimited: the
@@ -480,6 +503,25 @@ int main(int argc, char* argv[]) {
               << zed_info.camera_configuration.resolution.width << " x "
               << zed_info.camera_configuration.resolution.height << std::endl;
 
+    // Capture settings: applied now, restored on every exit from here
+    // (.ai/specs/camera-settings/decisions.md D5)
+    installInterruptHandler();
+    CameraSettingsGuard settings_guard(zed_camera,
+                                       snapshotCameraSettings(zed_camera));
+    if (!camera_settings.empty()) {
+      std::string error;
+      if (!validateCameraSettings(zed_camera, camera_settings, error) ||
+          !applyCameraSettings(zed_camera, camera_settings, error)) {
+        std::cerr << "Error: " << error << std::endl;
+        return EXIT_FAILURE;
+      }
+      printCameraSettings(zed_camera, "Camera settings (applied from " +
+                                          args.camera_settings_file + ")");
+    } else {
+      printCameraSettings(zed_camera,
+                          "Camera settings (current values, not changed)");
+    }
+
     // change can_use_calib_prior if you dont want to use the calibration file
     can_use_calib_prior = status != sl::ERROR_CODE::INVALID_CALIBRATION_FILE;
 
@@ -562,8 +604,9 @@ int main(int argc, char* argv[]) {
                      display_size.height + text_area_height);
 
     while (1) {
-      if (key == 'q' || key == 'Q' || key == 27) {
+      if (key == 'q' || key == 'Q' || key == 27 || interruptRequested()) {
         std::cout << "Calibration aborted by user." << std::endl;
+        settings_guard.restore();
         zed_camera.close();
         return EXIT_SUCCESS;
       }
@@ -1017,8 +1060,14 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    // Stop camera acquisition
+    // Settings at the end of the collection: they must match the start
+    printCameraSettings(zed_camera, "Camera settings (end of collection)");
+
+    // Stop camera acquisition. Ctrl+C gets its default behaviour back, so
+    // that it can still interrupt the calibration computation
+    settings_guard.restore();
     zed_camera.close();
+    uninstallInterruptHandler();
   }
 
   // Start the calibration process

@@ -206,6 +206,7 @@ Usage: ./zed_stereo_calibration [options]
   --min_samples <value>  Samples needed before the collection can end on complete metrics (default 25, at least 20).
   --max_samples <value>  Samples after which the collection pauses if metrics are incomplete (default 35, 0 = no maximum).
   --use_stored_values    Recompute the calibration from the images stored in 'zed-images/'.
+  --camera_settings <file> YAML file with the capture settings to apply (exposure, gain, white balance...), restored on exit.
   --svo <file>           Path to the SVO file.
   --fisheye              Use fisheye lens model.
   --virtual              Use ZED X One cameras as a virtual stereo pair.
@@ -285,6 +286,31 @@ tagSpacing: 0.3          #ratio of space between tags to tagSize
 
 - `--use_stored_values --target_yaml target.yaml` recomputes the calibration from the images saved
   in `zed-images/`, without the camera.
+
+#### Camera Settings
+
+By default the tools do not change any capture setting: exposure, gain and white balance stay as the
+camera has them, usually automatic. Automatic exposure keeps adapting during the collection, and a
+long exposure blurs a moving target. To keep the capture conditions constant, pass a settings file:
+
+```bash
+./zed_stereo_calibration --target_yaml target.yaml --camera_settings ../../config/camera_settings_zed2i.yaml
+./zed_stereo_checker     --target_yaml target.yaml --camera_settings ../../config/camera_settings_zed2i.yaml
+```
+
+- The file uses the `sl::VIDEO_SETTINGS` names (`EXPOSURE`, `GAIN`, `AEC_AGC`, `SHARPNESS`,
+  `WHITEBALANCE_TEMPERATURE`...), one `NAME: value` per line. Only the listed settings are applied.
+  [`config/camera_settings_zed2i.yaml`](config/camera_settings_zed2i.yaml) is a commented starting
+  point with the range and the effect of each setting.
+- The tool stops **before collecting** if a setting is not supported by the connected camera, is out
+  of its range, is read-only, or contradicts another one (e.g. `AEC_AGC: 1` together with `EXPOSURE`).
+  Each value is read back after being applied.
+- The settings in use are printed at start-up, with or without a file, and again at the end of the
+  collection, so `... | tee calib.log` records the capture conditions of the calibration.
+- The previous values are **restored on exit**: end of the calibration, `q`, error or Ctrl+C. The next
+  program using the camera (ZED Explorer, the ROS wrapper) does not inherit the manual settings.
+- Use the same file for the calibration and the checker. It has no effect with `--use_stored_values`,
+  which does not open the camera: the stored images do not record the settings, the capture log does.
 
 #### Calibration Process
 
@@ -425,6 +451,7 @@ Usage: ./zed_stereo_checker [options]
   --square_size <value>  Size of a square in the checkerboard (in mm)
   --target_yaml <file>   Kalibr AprilGrid target file (replaces the checkerboard)
   --detector_params <file> OpenCV YAML file with AprilGrid detector parameters
+  --camera_settings <file> YAML file with the capture settings to apply, restored on exit (see Camera Settings)
   --min_tags <value>     Minimum number of AprilGrid tags for a valid view (default 12)
   --min_rows <value>     Minimum number of tag rows for a valid view (default 2)
   --min_cols <value>     Minimum number of tag columns for a valid view (default 2)

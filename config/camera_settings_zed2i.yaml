@@ -1,0 +1,37 @@
+# Capture settings for zed_stereo_calibration / zed_stereo_checker (--camera_settings).
+#
+# Starting point for a ZED 2i (firmware 1523, ZED SDK 5.1): the values the camera reported right after
+# opening on 2026-11-03, in the lab, with exposure and white balance switched to manual so that they stay
+# constant during the whole collection. Tune them on the bench with zed_stereo_checker before calibrating,
+# and use the same file for the calibration and the checker.
+#
+# Only the settings listed here are applied; the others keep their current value. Every value must be an
+# integer within the range the camera reports, or the tool stops before collecting. The previous values
+# are restored when the tool exits (end, 'q', error or Ctrl+C).
+
+# --- Image processing -------------------------------------------------------------------------------
+BRIGHTNESS: 4        # [0, 8]
+CONTRAST: 4          # [0, 8]
+HUE: 0               # [0, 11]
+SATURATION: 4        # [0, 8]   colour only: no effect on the detection, which uses grey levels
+SHARPNESS: 4         # [0, 8]   digital sharpening: changes the edges the corner detection relies on
+GAMMA: 5             # [1, 9]   ISP gamma: changes the contrast of the target edges
+
+# --- Exposure and gain (manual) ---------------------------------------------------------------------
+EXPOSURE: 50         # [0, 100] percentage of the frame time: 100 = 19.97 ms at 15 fps, 0 = 0.17 ms.
+                     #          Long exposures blur a moving target; prefer short ones and more light
+GAIN: 1              # [0, 100] sensor gain: high values add noise to the corners
+AEC_AGC: 0           # [0, 1]   0 = manual (keeps EXPOSURE and GAIN), 1 = automatic.
+                     #          With 1, remove EXPOSURE and GAIN from this file
+
+# --- White balance (manual) -------------------------------------------------------------------------
+WHITEBALANCE_TEMPERATURE: 4700   # [2800, 6500] K, multiple of 100
+WHITEBALANCE_AUTO: 0             # [0, 1] 0 = manual (keeps WHITEBALANCE_TEMPERATURE), 1 = automatic.
+                                 #        With 1, remove WHITEBALANCE_TEMPERATURE from this file
+
+# --- ZED X / ZED X One only: not supported by the ZED 2i ---------------------------------------------
+# EXPOSURE_TIME: 10000           # exposure in microseconds (replaces EXPOSURE)
+# ANALOG_GAIN: 1000              # sensor gain in mdB, [1000, 16000] by default (replaces GAIN)
+# DIGITAL_GAIN: 1                # ISP gain factor, [1, 256] by default (replaces GAIN)
+# EXPOSURE_COMPENSATION: 50      # [0, 100], 50 = no compensation
+# DENOISING: 50                  # [0, 100]

@@ -6,6 +6,7 @@
 #include <sl/CameraOne.hpp>
 
 #include "aprilgrid.hpp"
+#include "zed_camera_settings.hpp"
 
 // *********************************************************************************
 // CHANGE THIS PARAMS USING THE COMMAND LINE OPTIONS
@@ -183,6 +184,7 @@ struct Args {
     int min_tags = DEFAULT_MIN_TAGS;
     int min_rows = DEFAULT_MIN_TAG_ROWS;
     int min_cols = DEFAULT_MIN_TAG_COLS;
+    std::string camera_settings_file;  // optional: capture settings to apply
 
     void parse(int argc, char* argv[]) {
         app_name = argv[0];
@@ -212,6 +214,8 @@ struct Args {
                 calib_opencv_file = argv[++i];
             } else if (arg == "--target_yaml" && i + 1 < argc) {
                 target_yaml = argv[++i];
+            } else if (arg == "--camera_settings" && i + 1 < argc) {
+                camera_settings_file = argv[++i];
             } else if (arg == "--detector_params" && i + 1 < argc) {
                 detector_params_file = argv[++i];
             } else if (arg == "--min_tags" && i + 1 < argc) {
@@ -235,6 +239,8 @@ struct Args {
                           << DEFAULT_MIN_TAG_ROWS << ")" << std::endl;
                 std::cout << "  --min_cols <value>     Minimum number of tag columns for a valid view (default "
                           << DEFAULT_MIN_TAG_COLS << ")" << std::endl;
+                std::cout << "  --camera_settings <file> YAML file with the capture settings to apply "
+                             "(exposure, gain, white balance...), restored on exit" << std::endl;
                 std::cout << "  --svo <file>           Path to the SVO file" << std::endl;
                 std::cout << "  --fisheye              Use fisheye lens model" << std::endl;
                 std::cout << "  --virtual              Use ZED X One cameras as a virtual stereo pair" << std::endl;
@@ -299,6 +305,17 @@ int main(int argc, char* argv[]) {
         std::cout << "   - Square size:\t\t" << square_size << " mm" << std::endl;
         std::cout << "Change these parameters using the command line options if needed. Use '-h' for help." << std::endl << std::endl;
     }
+
+    // ---- Capture settings file: read before opening the camera ----
+    std::vector<CameraSetting> camera_settings;
+    if (!args.camera_settings_file.empty()) {
+        std::string error;
+        if (!loadCameraSettings(args.camera_settings_file, camera_settings, error)) {
+            std::cerr << "Error: " << error << std::endl;
+            return EXIT_FAILURE;
+        }
+    }
+    installInterruptHandler();
 
     // ---- ZED camera initialization (mirrors stereo_calibration) ----
     sl::Camera zed_camera;
@@ -369,6 +386,21 @@ int main(int argc, char* argv[]) {
     std::cout << " * Camera S/N: " << zed_info.serial_number << std::endl;
     std::cout << " * Camera Resolution: " << full_size.width << " x " << full_size.height << std::endl;
 
+    // ---- Capture settings: applied now, restored on every exit from here ----
+    CameraSettingsGuard settings_guard(zed_camera, snapshotCameraSettings(zed_camera));
+    if (!camera_settings.empty()) {
+        std::string error;
+        if (!validateCameraSettings(zed_camera, camera_settings, error) ||
+            !applyCameraSettings(zed_camera, camera_settings, error)) {
+            std::cerr << "Error: " << error << std::endl;
+            return EXIT_FAILURE;
+        }
+        printCameraSettings(zed_camera, "Camera settings (applied from " +
+                                            args.camera_settings_file + ")");
+    } else {
+        printCameraSettings(zed_camera, "Camera settings (current values, not changed)");
+    }
+
     // ---- Populate calibration from the SDK (reflects the active calibration source) ----
     StereoCalibData calib;
     calib.setFrom(zed_info.camera_configuration.calibration_parameters_raw);
@@ -409,7 +441,7 @@ int main(int argc, char* argv[]) {
 
     char key = ' ';
     while (1) {
-        if (key == 'q' || key == 'Q' || key == 27) break;
+        if (key == 'q' || key == 'Q' || key == 27 || interruptRequested()) break;
 
         if (zed_camera.grab() != sl::ERROR_CODE::SUCCESS) {
             key = cv::waitKey(10);
@@ -593,6 +625,7 @@ int main(int argc, char* argv[]) {
         key = static_cast<char>(cv::waitKey(10));
     }
 
+    settings_guard.restore();
     zed_camera.close();
     return EXIT_SUCCESS;
 }
