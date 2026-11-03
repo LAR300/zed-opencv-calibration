@@ -67,7 +67,17 @@
     `FileStorage`, com os mesmos IDs, a ordem dos cantos e a precisão ≥ 9 dígitos.
   - **Pronto quando:** `ctest` verde, e `python3 -c "import json; json.load(open(...))"` lê o
     arquivo gerado pelo teste.
-- [ ] 4. **Escrita de `meta.json`** (R8, R9). `MetaWriter`, com os campos fixos e uma lista de
+- [x] 4. **Escrita de `meta.json`** (R8, R9). Feito em `common/capture_io/meta_io.{hpp,cpp}`,
+  testes em `tests/test_meta_io.cpp` (10 casos; 106/106 no total). O `json.load` do Python lê o
+  arquivo.
+  - O `cv::FileStorage` não escreve `null`, `true` nem `false` em JSON. A escrita usa marcadores de
+    texto (`__ZEDCAL_*`) e os troca pelos literais no fim. Um texto do usuário com esse prefixo é
+    recusado, para não virar `null` sem querer.
+  - `timestamp_ns` vai como texto (19 dígitos não cabem num `double`). O spec § Formatos foi
+    ajustado.
+  - Também ficaram aqui `utcNow()` e `readHostUptime()`, que a etapa 8 usa.
+
+  Especificação original da etapa: `MetaWriter`, com os campos fixos e uma lista de
   quadros. Campo ausente é gravado como `null`.
   - Testes primeiro: com as temperaturas ausentes, o JSON tem `null` nos três campos; a sessão
     aparece copiada.

@@ -188,12 +188,15 @@ usados.
   "camera_settings": {"start": {"EXPOSURE": 50}, "end": {"EXPOSURE": 50}},
   "started_utc": "2026-11-03T14:00:00Z", "ended_utc": "...", "end_reason": "...",
   "frames": [
-    {"pose_id": "B1-P-TL", "n": 0, "timestamp_ns": 0, "host_uptime_s": 0.0,
+    {"pose_id": "B1-P-TL", "n": 0, "timestamp_ns": "1762178400123456789", "host_uptime_s": 0.0,
      "since_camera_open_s": 0.0,
      "temperature_c": {"onboard_left": null, "onboard_right": null, "imu": null}}
   ]
 }
 ```
+
+`timestamp_ns` é gravado como **texto**: com 19 dígitos, ele não cabe num `double` sem perder os
+nanossegundos, e é assim que leitores como o `json` do Python e o `cv::FileStorage` tratam números.
 
 ## Condições de implementação
 
