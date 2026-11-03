@@ -28,8 +28,16 @@ rodadas, em `ros2_ws/dev/calib_runs/<data>_<o_que>/`, fora deste repositório.
 
 ## Rodando as ferramentas
 
-- **A captura ao vivo apaga o `zed-images/` do diretório atual.** Comece cada rodada numa pasta
-  nova em `calib_runs/`. O `--use_stored_values` só lê, não apaga.
+- **Sem `--session`, a captura ao vivo apaga o `zed-images/` do diretório atual.** Comece cada
+  rodada numa pasta nova em `calib_runs/`. O `--use_stored_values` só lê, não apaga.
+- **Com `--session`, nada é apagado.** A captura vai para
+  `calib_runs/dados/<condicao>/captura_<XX>/`, e uma pasta já usada é recusada antes de abrir a
+  câmera: troque o número da captura no arquivo de sessão. Testes ficam fora de `dados/`, em
+  `calib_runs/testes_persistencia/`.
+- **Exportar as detecções de uma captura antiga** sem tocar na pasta original: numa pasta de
+  trabalho, faça um link `zed-images` para o `zed-images/` original e rode
+  `--use_stored_values --detections_out detections.json` ali. O YAML do recálculo é gravado na
+  pasta de trabalho.
 - **Testar com a câmera sem abrir janela na tela do usuário:** rode a ferramenta num `Xvfb :98`
   próprio e encerre com `timeout -s INT`. O Ctrl+C restaura os controles de captura
   (`--camera_settings`). Encerre esse Xvfb pelo PID: nunca `killall Xvfb`, porque o container do
@@ -43,3 +51,13 @@ rodadas, em `ros2_ws/dev/calib_runs/<data>_<o_que>/`, fora deste repositório.
   e `cmp`.
 - **O estado dos controles da câmera** pode ser lido sem alterar nada com
   `calib_runs/tools/read_video_settings`.
+- **Testar uma captura com sessão sem tocar no teclado:**
+  `calib_runs/tools/bench_session_capture.sh <condicao> <captura> <toques>` roda a ferramenta num
+  `Xvfb :98` próprio, aperta `s` o número de vezes pedido (com `calib_runs/tools/sendkey`, via XTest)
+  e depois `q`. `calib_runs/tools/check_detections <captura> <target.yaml>` detecta os PNGs de novo
+  e compara com o `detections.json`. Com o alvo parado, só o primeiro par passa no filtro de
+  dissimilaridade.
+- **O `FILE(GLOB ...)` do CMake só lista os arquivos na configuração.** Depois de criar um `.cpp`
+  novo, rode `cmake ..` antes do `make`, senão o link falha com "undefined reference".
+- **Testes unitários:** `cmake -S tests -B build/unit_tests && make -C build/unit_tests &&
+  build/unit_tests/aprilgrid_tests`, no container, como `admin`.

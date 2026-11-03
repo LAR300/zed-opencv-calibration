@@ -79,7 +79,7 @@ Por que esta ordem:
   - **A mudança é no repositório `isaac_ros`, não neste.** Spec curta, registrada aqui por ser
     pré-requisito.
 
-- [ ] **persistencia-captura** — Pares brutos, detecções e metadados por captura (R1, R8)
+- [x] **persistencia-captura** — Pares brutos, detecções e metadados por captura (R1, R8)
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: auditoria, ambiente-sensores (para a temperatura)
   - **Estrutura:** `dados/<condicao>/<captura_XX>/{left,right}/<pose_id>_<n>.png`, mais

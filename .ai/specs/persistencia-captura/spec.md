@@ -227,23 +227,32 @@ nanossegundos, e é assim que leitores como o `json` do Python e o `cv::FileStor
 
 ## Critérios de aceitação
 
-- [ ] Sem `--session`, a regressão do xadrez é idêntica ao `baseline.yml` e o fluxo antigo não
-      muda.
-- [ ] Com `--session`, uma captura ao vivo cria `captura_<XX>/` com `left/`, `right/`,
+> Validação: ver as etapas de [`plan.md`](plan.md), com o registro de bancada de 2026-11-03.
+
+- [x] Sem `--session`, a regressão do xadrez é idêntica ao `baseline.yml` e o fluxo antigo não
+      muda. Conferido depois de cada etapa da Fase B e da C.
+- [x] Com `--session`, uma captura ao vivo cria `captura_<XX>/` com `left/`, `right/`,
       `detections.json`, `meta.json`, `session.yaml` e `capture.log`. Nada é gravado no diretório
-      corrente.
-- [ ] Uma segunda execução com a mesma sessão é recusada antes de abrir a câmera, e a primeira
+      corrente. Bancada: `testes_persistencia/teste_etapa8/captura_01`.
+      - O YAML da calibração vai para a pasta da captura, mas isso **não foi exercitado ao vivo**:
+        a calibração exige 20 pares, e a cena parada só deu 1. Fica para a primeira captura
+        completa com o alvo em movimento.
+- [x] Uma segunda execução com a mesma sessão é recusada antes de abrir a câmera, e a primeira
       captura fica intacta.
-- [ ] Sessão com campo obrigatório ausente, condição inválida ou `schema_version` desconhecido
-      gera erro claro e código diferente de zero, sem abrir a câmera.
-- [ ] `detections.json` contém as tags de cada câmera, inclusive as vistas por uma só. Os cantos
-      coincidem (|Δ| < 1e-6 px) com uma nova detecção do PNG salvo.
-- [ ] `json.load` do Python lê `detections.json` e `meta.json` sem erro.
-- [ ] `meta.json` tem todos os campos de R8 e R9. Com o HID sem permissão, as temperaturas são
-      `null` e o aviso aparece uma vez.
-- [ ] `--use_stored_values --detections_out` gera o `detections.json` de
-      `calib_runs/2026-10-20_ar_aprilgrid_v2/`, e a calibração do recálculo não muda.
-- [ ] Os testes de `common/capture_io/` passam com `-DBUILD_TESTS=ON`.
+- [x] Sessão com campo obrigatório ausente, condição inválida ou valor inválido gera erro claro e
+      código diferente de zero, sem abrir a câmera. O arquivo de sessão não tem
+      `schema_version`; a versão desconhecida é recusada nos leitores de `detections.json`.
+- [x] `detections.json` contém as tags de cada câmera, inclusive as vistas por uma só. Os cantos
+      coincidem com uma nova detecção do PNG salvo: 0 px de diferença, ao vivo e na exportação.
+- [x] `json.load` do Python lê `detections.json` e `meta.json` sem erro.
+- [x] `meta.json` tem todos os campos de R8 e R9.
+      - Com o HID sem permissão, as temperaturas são `null` e o aviso aparece uma vez. Isso está
+        coberto pelo teste unitário, mas **não foi exercitado na bancada**, porque o HID estava
+        acessível. Fica para o `ambiente-sensores`.
+- [x] `--use_stored_values --detections_out` gera o `detections.json` de
+      `calib_runs/2026-10-20_ar_aprilgrid_v2/` (29 pares, numa pasta de trabalho), e a calibração
+      do recálculo não muda.
+- [x] Os testes de `common/capture_io/` passam com `-DBUILD_TESTS=ON` (117/117 no total).
 
 ## Perguntas em aberto
 

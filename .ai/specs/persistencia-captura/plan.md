@@ -194,7 +194,15 @@
     - o arquivo de `2026-10-20_ar_aprilgrid_v2` é gerado e o Python o lê;
     - a calibração impressa é idêntica à do recálculo sem a flag;
     - a regressão do xadrez continua idêntica.
-- [ ] 10. **Documentação.** `config/session_example.yaml` comentado; seção no `README.md`;
+- [x] 10. **Documentação.** Feito:
+  - `README.md`, seção "Traceable Capture (`--session`)": arquivo de sessão, estrutura da captura,
+    nada apagado, restrições do modo e `--detections_out`;
+  - `config/session_example.yaml`, comentado desde a etapa 1;
+  - `.ai/docs/bench.md`: sessão sem apagar nada, exportação de capturas antigas numa pasta de
+    trabalho, os auxiliares de bancada, o `cmake ..` depois de um arquivo novo e os testes
+    unitários.
+
+  Especificação original da etapa: `config/session_example.yaml` comentado; seção no `README.md`;
   `.ai/docs/bench.md` atualizado (sessão, nada apagado).
   - **Pronto quando:** um usuário segue o README e grava uma captura de teste sem consultar o
     código.

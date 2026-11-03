@@ -312,6 +312,43 @@ long exposure blurs a moving target. To keep the capture conditions constant, pa
 - Use the same file for the calibration and the checker. It has no effect with `--use_stored_values`,
   which does not open the camera: the stored images do not record the settings, the capture log does.
 
+#### Traceable Capture (`--session`)
+
+For calibrations that must be compared, repeated or reprocessed later (with other models, or with a
+refractive model under water), a session file makes every capture self-contained:
+
+```bash
+./zed_stereo_calibration --target_yaml target.yaml --camera_settings ../../config/camera_settings_zed2i.yaml \
+                         --session my_session.yaml
+```
+
+- Start from [`config/session_example.yaml`](config/session_example.yaml). It names the output root,
+  the **condition** (e.g. `A_ar_sem_acrilico`) and the **capture number**, and records the lens, the
+  target dimensions measured with a caliper, the flat port in front of the camera and the medium.
+  Every field is mandatory; write `null` for what is unknown or does not apply. Quote texts that start
+  with a digit, such as dates and the lens (`lens: "2.1mm"`).
+- Everything goes to `<output_root>/<condition>/captura_<XX>/`:
+
+  | File | Content |
+  |---|---|
+  | `left/<pose_id>_<n>.png`, `right/...` | the raw pairs (unrectified, lossless) |
+  | `detections.json` | per camera, **every** detected tag, with the corners before and after the refinement |
+  | `meta.json` | camera, SDK, code commit, host, the session, the capture settings at start and end, and per pair the image timestamp, the host uptime and the sensor temperatures |
+  | `session.yaml`, `capture.log` | the session file used and the whole terminal output |
+  | `zed_calibration_<serial>.yml` | the calibration, as without `--session` |
+
+- **Nothing is ever deleted or overwritten.** The tool refuses to start if the capture folder already
+  exists and is not empty: use the next capture number. `zed-images/` is not used.
+- The session mode requires the AprilGrid (`--target_yaml`) and records a new live capture, so it
+  cannot be combined with `--use_stored_values`.
+- `detections.json` and `meta.json` are plain JSON (`schema_version: 1`), read by the offline analysis.
+  The temperatures are `null` when the camera sensors cannot be reached (see the permissions in
+  `.ai/docs/bench.md`).
+- Older captures can be brought to the same format without the camera:
+  `--use_stored_values --detections_out detections.json` writes the detections of `zed-images/`
+  (checkerboard or AprilGrid) with the detector the calibration uses; an existing file is never
+  overwritten.
+
 #### Calibration Process
 
 The calibration process consists of two main phases:
