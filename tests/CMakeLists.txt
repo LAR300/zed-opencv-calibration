@@ -9,6 +9,7 @@ find_package(OpenCV REQUIRED)
 include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/aprilgrid)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../stereo_calibration/include)
 
 FILE(GLOB_RECURSE TEST_SRC_FILES "*.cpp")
 FILE(GLOB_RECURSE APRILGRID_SRC_FILES "../common/aprilgrid/*.cpp")

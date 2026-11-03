@@ -1,11 +1,16 @@
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 
 #include "aprilgrid.hpp"
 #include "calibration_checker.hpp"
 #include "opencv_calibration.hpp"
+#include "sample_limits.hpp"
+
+static_assert(MIN_CALIBRATION_SAMPLES == MIN_IMAGE,
+              "sample_limits.hpp must match the calibration minimum");
 
 namespace fs = std::filesystem;
 
@@ -42,6 +47,8 @@ void applyCoverageIndicatorOverlay(cv::Mat& image,
                                    const cv::Mat& coverage_indicator,
                                    const cv::Mat& limits_indicator);
 void applyPosIndicatorOverlay(cv::Mat& image, const cv::Mat& pos_indicator);
+void drawBanner(cv::Mat& image, const std::vector<std::string>& lines,
+                const cv::Scalar& color);
 
 /// Rendering
 constexpr int text_area_height = 380;   // Height of the area below the images
@@ -49,8 +56,9 @@ const cv::Size display_size(720, 404);  // Size of the rendered images
 
 /// Calibration condition
 const float max_repr_error = 0.5;  // in pixels
-const int min_samples = 25;
-const int max_samples = 35;
+// Changed with --min_samples / --max_samples (max 0 = no maximum)
+int min_samples = COLLECTION_MIN_SAMPLES;
+int max_samples = COLLECTION_MAX_SAMPLES;
 const float min_avg_x_coverage =
     0.65f;  // Checkerboard X position covering percentage of the image width
 const float min_avg_y_coverage =
@@ -103,6 +111,8 @@ struct Args {
   int min_tags = DEFAULT_MIN_TAGS;
   int min_rows = DEFAULT_MIN_TAG_ROWS;
   int min_cols = DEFAULT_MIN_TAG_COLS;
+  bool sample_limits_given = false;  // --min_samples or --max_samples passed
+  std::string sample_limits_error;   // set when one of them is not a number
 
   void parse(int argc, char* argv[]) {
     app_name = argv[0];
@@ -140,6 +150,14 @@ struct Args {
         min_rows = std::stoi(argv[++i]);
       } else if (arg == "--min_cols" && i + 1 < argc) {
         min_cols = std::stoi(argv[++i]);
+      } else if ((arg == "--min_samples" || arg == "--max_samples") &&
+                 i + 1 < argc) {
+        sample_limits_given = true;
+        int& target = (arg == "--min_samples") ? min_samples : max_samples;
+        std::string error;
+        if (!parseSampleCount(argv[++i], target, error) &&
+            sample_limits_error.empty())
+          sample_limits_error = arg + ": " + error;
       } else if (arg == "--help" || arg == "-h") {
         std::cout << "Usage: " << argv[0] << " [options]" << std::endl;
         std::cout << "  --h_edges <value>      Number of horizontal inner "
@@ -166,6 +184,13 @@ struct Args {
         std::cout << "  --min_cols <value>     Minimum tag columns seen in both "
                      "images (default "
                   << DEFAULT_MIN_TAG_COLS << ")." << std::endl;
+        std::cout << "  --min_samples <value>  Samples needed before the "
+                     "collection can end on complete metrics (default "
+                  << COLLECTION_MIN_SAMPLES << ", at least "
+                  << MIN_CALIBRATION_SAMPLES << ")." << std::endl;
+        std::cout << "  --max_samples <value>  Samples after which the "
+                     "collection pauses if metrics are incomplete (default "
+                  << COLLECTION_MAX_SAMPLES << ", 0 = no maximum)." << std::endl;
         std::cout << "  --use_stored_values    Recompute the calibration from "
                      "the images stored in 'zed-images/'."
                   << std::endl;
@@ -244,6 +269,16 @@ int main(int argc, char* argv[]) {
   std::cout << "*** Stereo Camera Calibration Tool ***" << std::endl;
   std::cout << std::endl;
 
+  // Sample limits are checked before anything else, the camera included
+  {
+    std::string error = args.sample_limits_error;
+    if (error.empty()) validateSampleLimits(min_samples, max_samples, error);
+    if (!error.empty()) {
+      std::cerr << "Error: " << error << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+
   // Calibration target: checkerboard (default) or Kalibr AprilGrid
   const bool use_aprilgrid = !args.target_yaml.empty();
   AprilGridOptions aprilgrid;
@@ -288,10 +323,24 @@ int main(int argc, char* argv[]) {
   }
   std::cout << std::endl;
 
-  // Initialize the calibration checker
+  if (args.use_stored_images) {
+    if (args.sample_limits_given)
+      std::cout << " * --min_samples / --max_samples have no effect with "
+                   "--use_stored_values: all the stored images are used."
+                << std::endl;
+  } else {
+    std::cout << " * Sample limits: min. " << min_samples << ", "
+              << (max_samples == 0 ? std::string("no maximum")
+                                   : "max. " + std::to_string(max_samples))
+              << std::endl;
+  }
+
+  // Initialize the calibration checker. Its maximum is unlimited: the
+  // maximum is handled by the collection loop, which pauses instead of
+  // ending (.ai/specs/sample-limits/decisions.md D1)
   CalibrationChecker checker(cv::Size(h_edges, v_edges), square_size,
-                             min_samples, max_samples, min_target_area,
-                             idealParams, verbose);
+                             min_samples, std::numeric_limits<size_t>::max(),
+                             min_target_area, idealParams, verbose);
 
   // Initialize the stereo calibration data structure
   StereoCalib calib;
@@ -501,6 +550,12 @@ int main(int argc, char* argv[]) {
     bool low_target_variability_on_last_pics = false;
     bool blurry_images = false;
 
+    // Collection limits (.ai/specs/sample-limits)
+    bool paused_at_max = false;   // maximum reached with incomplete metrics
+    bool max_lifted = false;      // the user chose to continue past it
+    std::string finish_message;   // why the last 'f' was refused
+    std::string end_reason;       // how the collection ended, for the log
+
     const std::string window_name = "ZED Calibration";
     cv::namedWindow(window_name, cv::WINDOW_KEEPRATIO);
     cv::resizeWindow(window_name, display_size.width * 2,
@@ -626,8 +681,8 @@ int main(int argc, char* argv[]) {
 
           cv::putText(
               rendering_image,
-              "Press 's' or the spacebar to save the current frames when "
-              "the target is visible in both images.",
+              "Press 's'/space to save the frames when the target is visible "
+              "in both images, 'f' to finish, 'q' to quit.",
               cv::Point(10, display.size[0] + 25), cv::FONT_HERSHEY_SIMPLEX,
               0.7, info_color, 1);
 
@@ -755,22 +810,89 @@ int main(int argc, char* argv[]) {
           std::stringstream ss_img_count;
           v_pos += v_space;
           ss_img_count << "* Sample saved: " << std::max(image_count, 0)
-                       << " [min. " << min_samples << ","
-                       << " max. " << max_samples << "]";
+                       << " [min. " << min_samples << ", "
+                       << (max_samples == 0
+                               ? std::string("no max.")
+                               : "max. " + std::to_string(max_samples))
+                       << "]";
           cv::putText(rendering_image, ss_img_count.str(), cv::Point(10, v_pos),
                       cv::FONT_HERSHEY_SIMPLEX, 0.7,
                       (image_count > min_samples ? info_color : warn_color), 1);
+        }
+
+        if (paused_at_max) {
+          drawBanner(rendering_image,
+                     {"Maximum of " + std::to_string(max_samples) +
+                          " samples reached. Incomplete: " +
+                          incompleteMetrics(pos_score_x, pos_score_y,
+                                            size_score, skew_score),
+                      "'s'/space: continue collecting (no maximum)",
+                      "'f': calibrate now    'q': abort"},
+                     warn_color);
+        } else if (!finish_message.empty() && !acquisition_completed) {
+          drawBanner(rendering_image, {finish_message}, warn_color);
         }
 
         cv::imshow(window_name, rendering_image);
         key = cv::waitKey(10);
 
         if (acquisition_completed) {
+          const int count = std::max(image_count, 0);
+          const auto pct = [](float score) {
+            return std::to_string(
+                       std::min(100, static_cast<int>(std::lround(score * 100.0f)))) +
+                   "%";
+          };
+          std::cout << ">>> Collection ended: " << end_reason << " - " << count
+                    << " samples - X " << pct(pos_score_x) << ", Y "
+                    << pct(pos_score_y) << ", Size " << pct(size_score)
+                    << ", Skew " << pct(skew_score) << std::endl;
+          const std::string incomplete = incompleteMetrics(
+              pos_score_x, pos_score_y, size_score, skew_score);
+          if (!incomplete.empty())
+            std::cout << "  ! Calibrating with incomplete metrics: " << incomplete
+                      << std::endl;
+          if (count < min_samples)
+            std::cout << "  ! Calibrating with fewer samples than --min_samples ("
+                      << count << "/" << min_samples << ")" << std::endl;
           std::cout << " *** Starting the calibration process ***" << std::endl;
           break;
         }
 
+        // 'f': end the collection now, if the calibration can run
+        if (key == 'f' || key == 'F') {
+          const int count = std::max(image_count, 0);
+          if (canFinishManually(count)) {
+            end_reason = paused_at_max
+                             ? "maximum reached, calibration chosen by the user"
+                             : "ended by the user ('f')";
+            paused_at_max = false;
+            acquisition_completed = true;
+          } else {
+            finish_message =
+                "Need at least " + std::to_string(MIN_CALIBRATION_SAMPLES) +
+                " samples to calibrate: " +
+                std::to_string(MIN_CALIBRATION_SAMPLES - count) + " more.";
+            std::cout << "  ! " << finish_message << std::endl;
+          }
+          continue;
+        }
+
+        // While paused, 's'/space only resumes: the current frame is not
+        // saved (.ai/specs/sample-limits/decisions.md D3)
+        if (paused_at_max) {
+          if ((key == 's' || key == 'S') || key == ' ') {
+            paused_at_max = false;
+            max_lifted = true;
+            std::cout << " * Collection resumed, without maximum. Press 'f' "
+                         "to calibrate."
+                      << std::endl;
+          }
+          continue;
+        }
+
         if ((key == 's' || key == 'S') || key == ' ') {
+          finish_message.clear();
           std::cout << "*** New acquisition triggered ***" << std::endl;
 
           missing_target_on_last_pics =
@@ -827,14 +949,36 @@ int main(int argc, char* argv[]) {
                         << std::endl;
               image_count++;
 
-              if (checker.evaluateSampleCollectionStatus(
-                      size_score, skew_score, pos_score_x, pos_score_y,
-                      min_size, max_size, min_skew, max_skew, min_bx, max_bx,
-                      min_by, max_by)) {
-                std::cout << ">>> Sample collection status: COMPLETE <<<"
-                          << std::endl
-                          << std::endl;
-                acquisition_completed = true;
+              // The checker only reports complete metrics; the maximum is
+              // handled here (.ai/specs/sample-limits/decisions.md D1)
+              checker.evaluateSampleCollectionStatus(
+                  size_score, skew_score, pos_score_x, pos_score_y, min_size,
+                  max_size, min_skew, max_skew, min_bx, max_bx, min_by, max_by);
+              const bool metrics_complete =
+                  pos_score_x >= 1.0f && pos_score_y >= 1.0f &&
+                  size_score >= 1.0f && skew_score >= 1.0f;
+              switch (collectionStep(image_count, min_samples, max_samples,
+                                     metrics_complete, max_lifted)) {
+                case CollectionStep::COMPLETE:
+                  std::cout << ">>> Sample collection status: COMPLETE <<<"
+                            << std::endl
+                            << std::endl;
+                  end_reason = "all metrics complete";
+                  acquisition_completed = true;
+                  break;
+                case CollectionStep::PAUSE_AT_MAX:
+                  paused_at_max = true;
+                  std::cout << "  ! Maximum of " << max_samples
+                            << " samples reached with incomplete metrics: "
+                            << incompleteMetrics(pos_score_x, pos_score_y,
+                                                 size_score, skew_score)
+                            << std::endl
+                            << "    's'/space: continue collecting (no "
+                               "maximum) | 'f': calibrate now | 'q': abort"
+                            << std::endl;
+                  break;
+                case CollectionStep::CONTINUE:
+                  break;
               }
 
               // Add the new checkerboard position to the coverage indicator
@@ -1022,4 +1166,19 @@ void applyPosIndicatorOverlay(cv::Mat& image, const cv::Mat& pos_indicator) {
   channels[2] = channels[2] - pos_indicator;
   channels[1] = channels[1] - pos_indicator;
   cv::merge(channels, image);
+}
+
+void drawBanner(cv::Mat& image, const std::vector<std::string>& lines,
+                const cv::Scalar& color) {
+  const int line_height = 34;
+  const int height = line_height * static_cast<int>(lines.size()) + 20;
+  const cv::Rect box(20, 20, image.cols - 40, height);
+  cv::Mat roi = image(box);
+  cv::Mat dark(roi.size(), roi.type(), cv::Scalar(0, 0, 0));
+  cv::addWeighted(roi, 0.35, dark, 0.65, 0.0, roi);
+  for (size_t i = 0; i < lines.size(); i++) {
+    cv::putText(image, lines[i],
+                cv::Point(box.x + 15, box.y + 30 + static_cast<int>(i) * line_height),
+                cv::FONT_HERSHEY_SIMPLEX, 0.8, color, 2);
+  }
 }

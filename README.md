@@ -203,6 +203,8 @@ Usage: ./zed_stereo_calibration [options]
   --min_tags <value>     Minimum AprilGrid tags seen in both images (default 12).
   --min_rows <value>     Minimum tag rows seen in both images (default 2).
   --min_cols <value>     Minimum tag columns seen in both images (default 2).
+  --min_samples <value>  Samples needed before the collection can end on complete metrics (default 25, at least 20).
+  --max_samples <value>  Samples after which the collection pauses if metrics are incomplete (default 35, 0 = no maximum).
   --use_stored_values    Recompute the calibration from the images stored in 'zed-images/'.
   --svo <file>           Path to the SVO file.
   --fisheye              Use fisheye lens model.
@@ -324,10 +326,32 @@ Here are some tips to improve each metric:
 - To raise the "Size" metric, move the checkerboard closer and farther from the camera. You must acquire at least one image where the checkerboard is covering almost the full left image and one where it's smaller and corners are barely detected [see the image below].
 - To raise the "Skew" metric, rotate the checkerboard in different angles. It's easier to obtain different skew values if the checkerboard is closer to the camera and rotated around the vertical and horizontal axes simultaneously.
 
-The "Calibrate" process will automatically start when either of these conditions is met:
+The "Calibrate" process will automatically start when all metrics reach 100% and the minimum number
+of samples (`--min_samples`, default 25) is collected.
 
-- All metrics reach 100% and the minimum number of samples is collected.
-- The maximum number of samples is reached (even if not all metrics reach 100%).
+If the maximum number of samples (`--max_samples`, default 35) is reached while some metrics are still
+below 100%, the collection **pauses** instead of calibrating. The live view keeps running and a banner
+lists the incomplete metrics:
+
+- **`s`** or **spacebar**: continue collecting, without a maximum. The current frame is not saved:
+  move the target and press `s` again to capture.
+- **`f`**: calibrate now with the samples collected so far.
+- **`q`** or **ESC**: abort.
+
+The **`f`** key also ends the collection at any time, as soon as at least 20 samples (the fewest the
+calibration accepts) are saved. Ending with incomplete metrics is allowed but reported: incomplete
+metrics usually mean a poorly determined calibration (for instance, too few tilted samples leave the
+focal length uncertain even with a low reprojection error).
+
+To keep collecting until all metrics are complete, without a maximum:
+
+```bash
+./zed_stereo_calibration --max_samples 0
+```
+
+The terminal reports how the collection ended, the number of samples and the final score of each
+metric (`>>> Collection ended: ...`), so that `./zed_stereo_calibration ... | tee calib.log` keeps a
+record of it. `--min_samples` and `--max_samples` have no effect with `--use_stored_values`.
 
 ![Calibration GUI](./images/calibration_gui.png)
 
