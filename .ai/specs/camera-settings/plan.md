@@ -84,7 +84,7 @@
   - os controles da ZED X comentados.
   - **Verificação:** a leitura da etapa 1 aceita o arquivo, e as ferramentas o aplicam na ZED 2i
     sem erro.
-- [ ] 7. **Calibração completa com controles fixos, com o usuário** (critérios de aceitação). Uma
+- [x] 7. **Calibração completa com controles fixos, com o usuário** (critérios de aceitação). Uma
   calibração AprilGrid com `--camera_settings config/camera_settings_zed2i.yaml`, seguindo o
   roteiro de movimentos.
   - **Verificação:**
@@ -92,7 +92,7 @@
     - o resultado passa nos critérios da spec `aprilgrid-target` (RMS < 0,5 px, fx/fy e baseline a
       ≤ 0,5 % da fábrica);
     - depois de sair, a câmera volta ao estado de antes.
-- [ ] 8. **Checker com o mesmo arquivo.** Rodar o checker com o arquivo e com a calibração da etapa 7.
+- [x] 8. **Checker com o mesmo arquivo.** Rodar o checker com o arquivo e com a calibração da etapa 7.
   - **Verificação:** os erros aparecem normalmente e o log mostra os controles.
 - [x] 9. **README** (R10). Seção "Camera settings":
   - a opção e o formato, apontando para o exemplo;
@@ -101,7 +101,7 @@
   - a recomendação de usar o mesmo arquivo na calibração e no checker;
   - o comportamento no `--use_stored_values`.
   - **Verificação:** os exemplos rodam como escritos.
-- [ ] 10. **Fechamento.** Build limpo com e sem `BUILD_TESTS`; `ctest` verde; regressão do xadrez
+- [x] 10. **Fechamento.** Build limpo com e sem `BUILD_TESTS`; `ctest` verde; regressão do xadrez
   idêntica; critérios de aceitação da spec conferidos um a um.
 
 ## Riscos
@@ -113,3 +113,36 @@
 | A ordem dos acoplamentos do SDK é diferente do esperado | a restauração deixa `AEC_AGC` errado | a ordem de D3 e a verificação com `read_video_settings` depois de cada caso |
 | Exposição manual errada para a luz da bancada | imagens escuras ou borradas, menos tags | o exemplo é ponto de partida; o checker mostra o efeito antes de calibrar; a escolha dos valores ótimos é não-objetivo |
 | Mudar o laço quebra o xadrez ou o AprilGrid | regressão | regressão offline do xadrez depois das etapas 5 e 10; calibração AprilGrid completa na etapa 7 |
+
+## Registro da validação (2026-11-03)
+
+Execução em `calib_runs/2026-11-03_camera_settings/`, com o arquivo de exemplo sem alterações
+(`EXPOSURE 50`, `GAIN 1`, `AEC_AGC 0`, `WHITEBALANCE_TEMPERATURE 4700`, `WHITEBALANCE_AUTO 0`).
+
+- **Ferramenta: aprovada.**
+  - Os controles foram aplicados e impressos nos três logs (checker de ajuste, calibração e checker
+    final).
+  - Os valores do início e do fim da coleta são iguais.
+  - Depois de sair com `q`, a câmera voltou ao estado anterior (`state_before.txt` contra
+    `state_after.txt`). Só `GAIN` e `EXPOSURE` diferem, porque o automático os move.
+  - A coleta terminou pelas métricas, com 25 amostras e uma mediana de 27 tags por vista.
+  - Antes, sem câmera ou com Ctrl+C num display virtual, já tinham sido verificados os casos de erro,
+    o modo sem arquivo, o aviso no `--use_stored_values`, a restauração por Ctrl+C e a regressão do
+    xadrez.
+- **Calibração:**
+  - RMS L / R / Stereo de 0,305 / 0,310 / 0,311 px;
+  - fx L / R a +0,31 % / +0,38 % da fábrica;
+  - baseline de 120,22 mm (+0,20 %);
+  - **fy L / R a +0,59 % / +0,65 % da fábrica, acima do limite de 0,5 % da spec
+    `aprilgrid-target`.**
+
+  Na validação cruzada a calibração é tão boa quanto a AprilGrid v2: Stereo de 0,322 px contra
+  0,319 px nas imagens da v2.
+- **O fy fora do limite não é atribuído a esta feature.** Todas as calibrações AprilGrid (v2,
+  acrílico e esta) têm fy/fx de +0,2 a +0,3 %, contra +0,005 % na fábrica e +0,065 % no xadrez. As
+  causas prováveis são a placa (escala vertical diferente da horizontal, ~1,4 mm em 572 mm) ou o
+  conjunto de imagens capturadas. Fica para investigação fora desta spec, medindo as distâncias
+  horizontal e vertical de 5 passos na placa.
+- O usuário não salvou prints do checker final, e os erros dele não ficam no log.
+
+Spec dada como concluída pelo usuário em 2026-11-03.

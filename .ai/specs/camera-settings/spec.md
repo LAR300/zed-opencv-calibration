@@ -123,23 +123,28 @@ cantos, e hoje nem é possível saber que valores estavam valendo.
 
 ## Critérios de aceitação
 
-- [ ] **Sem `--camera_settings`,** nenhum controle muda (os valores lidos antes e depois de uma
+- [x] **Sem `--camera_settings`,** nenhum controle muda (os valores lidos antes e depois de uma
       execução são iguais), e os valores em uso aparecem no início do `calib.log`.
-- [ ] **Com o arquivo de exemplo,** todos os controles são aplicados, lidos de volta iguais e
+- [x] **Com o arquivo de exemplo,** todos os controles são aplicados, lidos de volta iguais e
       impressos no início; o `calib.log` mostra os valores.
-- [ ] **Com exposição e ganho manuais,** os valores no fim da coleta são os mesmos do início.
-- [ ] **Erros:** cada caso de R4 (`EXPOSURE_TIME`, `BRIGHTNESS: 9`, `WHITEBALANCE_TEMPERATURE: 4750`,
+- [x] **Com exposição e ganho manuais,** os valores no fim da coleta são os mesmos do início.
+- [x] **Erros:** cada caso de R4 (`EXPOSURE_TIME`, `BRIGHTNESS: 9`, `WHITEBALANCE_TEMPERATURE: 4750`,
       `AEC_AGC: 1` com `EXPOSURE`, nome inexistente, YAML malformado) encerra com mensagem clara e
       código diferente de zero, sem iniciar a coleta.
-- [ ] **Restauração:** depois de terminar a calibração, de sair com `q` e de interromper com Ctrl+C,
+- [x] **Restauração:** depois de terminar a calibração, de sair com `q` e de interromper com Ctrl+C,
       `read_video_settings` mostra os mesmos valores de antes da execução.
-- [ ] **O checker** aceita o mesmo arquivo e mostra os erros de reprojeção com os controles
+- [x] **O checker** aceita o mesmo arquivo e mostra os erros de reprojeção com os controles
       aplicados.
-- [ ] **Sem regressão:** o recálculo `--use_stored_values` das imagens de xadrez de 16/10 continua
+- [x] **Sem regressão:** o recálculo `--use_stored_values` das imagens de xadrez de 16/10 continua
       idêntico ao `baseline.yml`, e o AprilGrid continua funcionando.
-- [ ] **Com `--use_stored_values --camera_settings <arquivo>`,** a calibração roda normalmente e o
+- [x] **Com `--use_stored_values --camera_settings <arquivo>`,** a calibração roda normalmente e o
       terminal mostra o aviso de R12.
-- [ ] **O arquivo de exemplo e o README** estão no repositório conforme R9 e R10.
+- [x] **O arquivo de exemplo e o README** estão no repositório conforme R9 e R10.
+
+> Validação: ver "Registro da validação" em [`plan.md`](plan.md). A ferramenta cumpriu todos os
+> critérios. Na calibração completa, fy ficou +0,59 % / +0,65 % acima da fábrica (limite de 0,5 % da
+> spec `aprilgrid-target`). Isso não é atribuído a esta feature: o fy/fx alto aparece em todas as
+> calibrações AprilGrid e provavelmente vem do alvo ou do conjunto de imagens.
 
 ## Perguntas em aberto
 
