@@ -171,7 +171,25 @@
 
 ### Fase C — capturas antigas e documentação
 
-- [ ] 9. **`--use_stored_values --detections_out`** (R10).
+- [x] 9. **`--use_stored_values --detections_out`** (R10). A flag grava o `detections.json` das
+  imagens de `zed-images/` (`pose_id = legacy`). Ela recusa um arquivo existente e só funciona com
+  `--use_stored_values`.
+  - A detecção do xadrez saiu de `calibrate()` para `detectCheckerboard()`, compartilhada com a
+    exportação, para que os dois usem os mesmos cantos. A regressão do xadrez continua idêntica.
+  - Os tamanhos do alvo, que são `float` nas ferramentas, vão para o JSON como o decimal escrito
+    (23,8, não 23,7999992).
+
+  **Verificado (2026-11-03),** numa cópia de trabalho com link para as imagens originais
+  (`testes_persistencia/legacy_v2`):
+  - **`2026-10-20_ar_aprilgrid_v2`:** 29 pares exportados; a calibração é idêntica com e sem a
+    flag; a segunda execução é recusada; o md5 de todos os arquivos da pasta original não mudou;
+    `check_detections` deu 0 px de diferença; o Python lê o arquivo.
+  - **Achado:** 281 das 1 511 tags (18,6 %) foram vistas por uma câmera só e são descartadas pela
+    calibração atual. É o risco 4 da auditoria, agora medido.
+  - **Xadrez `regress_chess`:** 35 pares, todos com 54 + 54 cantos, e o YAML idêntico ao
+    `baseline.yml`.
+
+  Especificação original da etapa:
   - **Pronto quando:**
     - o arquivo de `2026-10-20_ar_aprilgrid_v2` é gerado e o Python o lê;
     - a calibração impressa é idêntica à do recálculo sem a flag;

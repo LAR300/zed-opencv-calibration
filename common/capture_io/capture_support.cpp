@@ -1,6 +1,12 @@
 #include "capture_support.hpp"
 
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
 #include <iostream>
+
+#include <opencv2/calib3d.hpp>
+#include <opencv2/imgproc.hpp>
 
 // Writes every character to the original stream, to the memory buffer while
 // there is no file, and to the file once it is attached
@@ -97,10 +103,57 @@ DetectionsHeader aprilgridDetectionsHeader(const AprilGridOptions& options,
   h.target.type = "aprilgrid";
   h.target.rows = options.target.rows;
   h.target.cols = options.target.cols;
-  h.target.tag_size_mm = options.target.tag_size;
-  h.target.tag_spacing_ratio = options.target.tag_spacing;
+  h.target.tag_size_mm = floatToDecimal(options.target.tag_size);
+  h.target.tag_spacing_ratio = floatToDecimal(options.target.tag_spacing);
   h.target.source = target_source;
   h.detector_refinement = "xjunction_cornersubpix";
   h.detector_params = detectorParameterList(options.detector_params);
+  return h;
+}
+
+std::vector<std::pair<std::string, std::string>> legacyImagePairs(const std::string& folder) {
+  std::vector<std::pair<std::string, std::string>> pairs;
+  for (int i = 0;; i++) {
+    const std::string left = folder + "image_left_" + std::to_string(i) + ".png";
+    const std::string right = folder + "image_right_" + std::to_string(i) + ".png";
+    if (!std::filesystem::exists(left) || !std::filesystem::exists(right)) break;
+    pairs.emplace_back(left, right);
+  }
+  return pairs;
+}
+
+namespace {
+int checkerboardWindow(cv::Size image_size) { return image_size.width >= 3000 ? 15 : 11; }
+}  // namespace
+
+double floatToDecimal(float value) {
+  char text[32];
+  std::snprintf(text, sizeof(text), "%.7g", value);
+  return std::strtod(text, nullptr);
+}
+
+bool detectCheckerboard(const cv::Mat& gray, cv::Size inner_corners,
+                        std::vector<cv::Point2f>& corners) {
+  corners.clear();
+  if (!cv::findChessboardCorners(gray, inner_corners, corners, 3)) return false;
+  const int win = checkerboardWindow(gray.size());
+  cv::cornerSubPix(gray, corners, cv::Size(win, win), cv::Size(-1, -1),
+                   cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::MAX_ITER, 30,
+                                    0.001));
+  return true;
+}
+
+DetectionsHeader checkerboardDetectionsHeader(cv::Size inner_corners, float square_size_mm,
+                                              cv::Size image_size) {
+  DetectionsHeader h;
+  h.image_size = image_size;
+  h.target.type = "checkerboard";
+  h.target.cols = inner_corners.width;
+  h.target.rows = inner_corners.height;
+  h.target.square_size_mm = floatToDecimal(square_size_mm);
+  h.target.source = "command line";
+  const int win = checkerboardWindow(image_size);
+  h.detector_refinement =
+      "cornersubpix_" + std::to_string(win) + "x" + std::to_string(win);
   return h;
 }

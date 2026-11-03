@@ -1,5 +1,7 @@
 #include "opencv_calibration.hpp"
 
+#include "capture_support.hpp"
+
 #include <algorithm>
 #include <filesystem>
 #include <iomanip>
@@ -122,27 +124,12 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
       continue;
     }
 
-    bool found_l =
-        cv::findChessboardCorners(left_images.at(i), t_size, pts_l_f, 3);
-    bool found_r =
-        cv::findChessboardCorners(right_images.at(i), t_size, pts_r_f, 3);
+    // Shared with --detections_out, so that both use the same corners:
+    // findChessboardCorners, then cornerSubPix 11x11 (15x15 at 4K)
+    bool found_l = detectCheckerboard(left_images.at(i), t_size, pts_l_f);
+    bool found_r = detectCheckerboard(right_images.at(i), t_size, pts_r_f);
 
     if (found_l && found_r) {
-
-      // For HD (1920×1200): cv::Size(11, 11)
-      // For 4K (3840×2160): cv::Size(15, 15)
-      int win = (imageSize.width >= 3000) ? 15 : 11;
-
-      cv::cornerSubPix(
-          left_images.at(i), pts_l_f, cv::Size(win, win), cv::Size(-1, -1),
-          cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::MAX_ITER,
-                           30, 0.001));
-
-      cv::cornerSubPix(
-          right_images.at(i), pts_r_f, cv::Size(win, win), cv::Size(-1, -1),
-          cv::TermCriteria(cv::TermCriteria::EPS | cv::TermCriteria::MAX_ITER,
-                           30, 0.001));    
-
       pts_l.push_back(pts_l_f);
       pts_r.push_back(pts_r_f);
       object_points.push_back(pattern_points);

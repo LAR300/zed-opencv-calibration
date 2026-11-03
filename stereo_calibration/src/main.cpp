@@ -126,6 +126,7 @@ struct Args {
   std::string sample_limits_error;   // set when one of them is not a number
   std::string camera_settings_file;  // capture settings to apply
   std::string session_file;          // traceable capture mode (--session)
+  std::string detections_out;        // detections.json of the stored images
 
   void parse(int argc, char* argv[]) {
     app_name = argv[0];
@@ -159,6 +160,8 @@ struct Args {
         camera_settings_file = argv[++i];
       } else if (arg == "--session" && i + 1 < argc) {
         session_file = argv[++i];
+      } else if (arg == "--detections_out" && i + 1 < argc) {
+        detections_out = argv[++i];
       } else if (arg == "--detector_params" && i + 1 < argc) {
         detector_params_file = argv[++i];
       } else if (arg == "--min_tags" && i + 1 < argc) {
@@ -218,6 +221,10 @@ struct Args {
         std::cout << "  --session <file>       Traceable capture: images, detections "
                      "and metadata go to <output_root>/<condition>/captura_<XX>/ "
                      "(see config/session_example.yaml). Requires --target_yaml."
+                  << std::endl;
+        std::cout << "  --detections_out <file> With --use_stored_values: also write "
+                     "the detections of the stored images to <file> (detections.json "
+                     "format). An existing file is never overwritten."
                   << std::endl;
         std::cout << "  --svo <file>      Path to the SVO file." << std::endl;
         std::cout << "  --fisheye         Use fisheye lens model." << std::endl;
@@ -378,6 +385,22 @@ int main(int argc, char* argv[]) {
                    "the stored images were taken with the settings printed in "
                    "the log of their capture."
                 << std::endl;
+  }
+
+  // --detections_out: only for the stored images, never over an existing file
+  // (.ai/specs/persistencia-captura R10)
+  if (!args.detections_out.empty()) {
+    if (!args.use_stored_images) {
+      std::cerr << "Error: --detections_out works with --use_stored_values; a live "
+                   "capture writes its detections with --session."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (fs::exists(args.detections_out)) {
+      std::cerr << "Error: '" << args.detections_out
+                << "' already exists and is never overwritten." << std::endl;
+      return EXIT_FAILURE;
+    }
   }
 
   // Session (traceable capture mode): read and its folder prepared before
@@ -1267,6 +1290,54 @@ int main(int argc, char* argv[]) {
     settings_guard.restore();
     zed_camera.close();
     uninstallInterruptHandler();
+  }
+
+  // Detections of the stored images, with the detector the calibration uses
+  if (!args.detections_out.empty()) {
+    const auto pairs = legacyImagePairs(image_folder);
+    std::unique_ptr<DetectionsWriter> writer;
+    for (size_t i = 0; i < pairs.size(); i++) {
+      const cv::Mat gray_l = cv::imread(pairs[i].first, cv::IMREAD_GRAYSCALE);
+      const cv::Mat gray_r = cv::imread(pairs[i].second, cv::IMREAD_GRAYSCALE);
+      if (gray_l.empty() || gray_r.empty()) continue;
+      if (!writer)
+        writer = std::make_unique<DetectionsWriter>(
+            use_aprilgrid ? aprilgridDetectionsHeader(aprilgrid, gray_l.size(), args.target_yaml)
+                          : checkerboardDetectionsHeader(cv::Size(h_edges, v_edges),
+                                                         square_size, gray_l.size()));
+      FrameDetections frame;
+      frame.pose_id = "legacy";
+      frame.n = static_cast<int>(i);
+      frame.file_left = pairs[i].first;
+      frame.file_right = pairs[i].second;
+      if (use_aprilgrid) {
+        TagDetections raw_l, raw_r;
+        const TagDetections tags_l =
+            detectAprilGrid(gray_l, aprilgrid.target, aprilgrid.detector_params, &raw_l);
+        const TagDetections tags_r =
+            detectAprilGrid(gray_r, aprilgrid.target, aprilgrid.detector_params, &raw_r);
+        frame.left = cameraDetectionsFromTags(tags_l, raw_l);
+        frame.right = cameraDetectionsFromTags(tags_r, raw_r);
+      } else {
+        std::vector<cv::Point2f> corners;
+        if (detectCheckerboard(gray_l, cv::Size(h_edges, v_edges), corners))
+          for (const auto& c : corners) frame.left.corners.emplace_back(c.x, c.y);
+        if (detectCheckerboard(gray_r, cv::Size(h_edges, v_edges), corners))
+          for (const auto& c : corners) frame.right.corners.emplace_back(c.x, c.y);
+      }
+      writer->addFrame(frame);
+    }
+    std::string io_error;
+    if (!writer) {
+      std::cerr << "Error: no stored image pairs in '" << image_folder << "'" << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (!writer->write(args.detections_out, io_error)) {
+      std::cerr << "Error: " << io_error << std::endl;
+      return EXIT_FAILURE;
+    }
+    std::cout << " * Detections of " << writer->frameCount() << " stored pairs written to "
+              << args.detections_out << std::endl;
   }
 
   // Start the calibration process

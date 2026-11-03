@@ -103,3 +103,50 @@ TEST(aprilgrid_header_describes_target_and_detector) {
     if (name == "adaptiveThreshConstant") has_constant = value == 25.0;
   CHECK(has_constant);
 }
+
+TEST(legacy_pairs_stop_at_the_first_missing_index) {
+  // Same rule as calibrate(): image_{left,right}_<n>.png from 0 while both exist
+  const fs::path dir = freshDir();
+  for (int i : {0, 1, 2, 4}) {
+    std::ofstream(dir / ("image_left_" + std::to_string(i) + ".png")) << "x";
+    std::ofstream(dir / ("image_right_" + std::to_string(i) + ".png")) << "x";
+  }
+  std::ofstream(dir / "image_left_3.png") << "x";  // right_3 missing
+  const auto pairs = legacyImagePairs(dir.string() + "/");
+  CHECK(pairs.size() == 3);
+  CHECK(pairs[2].first == dir.string() + "/image_left_2.png");
+  CHECK(pairs[2].second == dir.string() + "/image_right_2.png");
+}
+
+TEST(checkerboard_header_describes_the_board) {
+  const DetectionsHeader h = checkerboardDetectionsHeader(cv::Size(9, 6), 23.8f,
+                                                          cv::Size(1280, 720));
+  CHECK(h.target.type == "checkerboard");
+  CHECK(h.target.cols == 9 && h.target.rows == 6);
+  CHECK(h.target.square_size_mm == 23.8);  // exact decimal, not 23.7999992
+  CHECK(h.detector_refinement == "cornersubpix_11x11");
+  CHECK(checkerboardDetectionsHeader(cv::Size(9, 6), 23.8f, cv::Size(3840, 2160))
+            .detector_refinement == "cornersubpix_15x15");
+}
+
+TEST(checkerboard_detection_finds_a_synthetic_board) {
+  // A rendered 10x7-square board has 9x6 inner corners
+  const int square = 40, cols = 10, rows = 7, margin = 60;
+  cv::Mat img(rows * square + 2 * margin, cols * square + 2 * margin, CV_8UC1, cv::Scalar(255));
+  for (int r = 0; r < rows; r++)
+    for (int c = 0; c < cols; c++)
+      if ((r + c) % 2 == 0)
+        cv::rectangle(img, cv::Rect(margin + c * square, margin + r * square, square, square),
+                      cv::Scalar(0), cv::FILLED);
+  std::vector<cv::Point2f> corners;
+  CHECK(detectCheckerboard(img, cv::Size(9, 6), corners));
+  CHECK(corners.size() == 54);
+  cv::Mat blank(200, 200, CV_8UC1, cv::Scalar(128));
+  CHECK(!detectCheckerboard(blank, cv::Size(9, 6), corners));
+}
+
+TEST(float_to_decimal_keeps_the_written_value) {
+  CHECK(floatToDecimal(0.3f) == 0.3);
+  CHECK(floatToDecimal(23.8f) == 23.8);
+  CHECK(floatToDecimal(88.0f) == 88.0);
+}
