@@ -1,3 +1,4 @@
+#include <chrono>
 #include <cstdlib>
 #include <filesystem>
 #include <iomanip>
@@ -5,11 +6,15 @@
 #include <memory>
 #include <sstream>
 
+#include <unistd.h>
+
 #include "aprilgrid.hpp"
+#include "build_info.hpp"
 #include "calibration_checker.hpp"
 #include "capture_dir.hpp"
 #include "capture_support.hpp"
 #include "detections_io.hpp"
+#include "meta_io.hpp"
 #include "opencv_calibration.hpp"
 #include "sample_limits.hpp"
 #include "session.hpp"
@@ -589,6 +594,74 @@ int main(int argc, char* argv[]) {
     }
 
     // change can_use_calib_prior if you dont want to use the calibration file
+    // Session mode: metadata of the capture (persistencia-captura R8, R9)
+    CaptureMeta capture_meta;
+    const auto camera_opened_at = std::chrono::steady_clock::now();
+    bool temperature_warned = false;
+    if (use_session) {
+      capture_meta.camera.model = sl::toString(zed_info.camera_model).c_str();
+      capture_meta.camera.serial = zed_info.serial_number;
+      capture_meta.camera.firmware = zed_info.camera_configuration.firmware_version;
+      capture_meta.camera.resolution =
+          cv::Size(zed_info.camera_configuration.resolution.width,
+                   zed_info.camera_configuration.resolution.height);
+      capture_meta.camera.fps =
+          static_cast<int>(std::lround(zed_info.camera_configuration.fps));
+      capture_meta.camera.lens = session.lens;
+      capture_meta.sdk_version = sl::Camera::getSDKVersion().c_str();
+      capture_meta.code_commit = ZEDCAL_GIT_COMMIT;
+      capture_meta.code_dirty = ZEDCAL_GIT_DIRTY != 0;
+      char hostname[256] = {0};
+      if (gethostname(hostname, sizeof(hostname) - 1) == 0)
+        capture_meta.hostname = hostname;
+      capture_meta.self_calibration_disabled = init_params.camera_disable_self_calib;
+      capture_meta.session = session;
+      capture_meta.camera_settings_start = snapshotCameraSettings(zed_camera).values;
+      capture_meta.started_utc = utcNow();
+    }
+    // Writes meta.json; called after every saved pair and when the collection ends
+    auto write_meta = [&]() {
+      if (!use_session) return;
+      std::string meta_error;
+      if (!writeCaptureMeta(capture_dir + "/meta.json", capture_meta, meta_error))
+        std::cerr << "  ! " << meta_error << std::endl;
+    };
+    auto end_meta = [&](const std::string& reason) {
+      if (!use_session) return;
+      capture_meta.camera_settings_end = snapshotCameraSettings(zed_camera).values;
+      capture_meta.ended_utc = utcNow();
+      capture_meta.end_reason = reason;
+      write_meta();
+    };
+    // Temperatures next to the image sensors and in the IMU; null when the
+    // sensors are not reachable (HID access, see ambiente-sensores)
+    auto read_temperatures = [&](FrameMeta& frame) {
+      sl::SensorsData sensors;
+      bool any = false;
+      if (zed_camera.getSensorsData(sensors, sl::TIME_REFERENCE::CURRENT) ==
+          sl::ERROR_CODE::SUCCESS) {
+        using Location = sl::SensorsData::TemperatureData::SENSOR_LOCATION;
+        const std::pair<Location, std::optional<double>*> locations[] = {
+            {Location::ONBOARD_LEFT, &frame.temperature_onboard_left},
+            {Location::ONBOARD_RIGHT, &frame.temperature_onboard_right},
+            {Location::IMU, &frame.temperature_imu}};
+        for (const auto& [location, field] : locations) {
+          float celsius = 0.0f;
+          if (sensors.temperature.get(location, celsius) == sl::ERROR_CODE::SUCCESS) {
+            *field = celsius;
+            any = true;
+          }
+        }
+      }
+      if (!any && !temperature_warned) {
+        std::cerr << "  ! Temperatures not available (camera sensors not reachable): "
+                     "recorded as null in meta.json"
+                  << std::endl;
+        temperature_warned = true;
+      }
+    };
+    int64_t grab_timestamp_ns = 0;
+
     can_use_calib_prior = status != sl::ERROR_CODE::INVALID_CALIBRATION_FILE;
 
     std::cout << " * Using prior calibration: "
@@ -678,6 +751,7 @@ int main(int argc, char* argv[]) {
     while (1) {
       if (key == 'q' || key == 'Q' || key == 27 || interruptRequested()) {
         std::cout << "Calibration aborted by user." << std::endl;
+        end_meta("aborted by the user");
         settings_guard.restore();
         zed_camera.close();
         return EXIT_SUCCESS;
@@ -687,6 +761,8 @@ int main(int argc, char* argv[]) {
       const cv::Scalar warn_color = cv::Scalar(0, 50, 250);
 
       if (zed_camera.grab() == sl::ERROR_CODE::SUCCESS) {
+        grab_timestamp_ns = static_cast<int64_t>(
+            zed_camera.getTimestamp(sl::TIME_REFERENCE::IMAGE).getNanoseconds());
         zed_camera.retrieveImage(zed_imageL, sl::VIEW::LEFT_UNRECTIFIED_BGR);
         zed_camera.retrieveImage(zed_imageR, sl::VIEW::RIGHT_UNRECTIFIED_BGR);
 
@@ -1083,6 +1159,18 @@ int main(int argc, char* argv[]) {
                 if (!detections_writer->write(capture_dir + "/detections.json", io_error))
                   std::cerr << "  ! " << io_error << std::endl;
                 session_images.emplace_back(path_l, path_r);
+                FrameMeta frame_meta;
+                frame_meta.pose_id = frame.pose_id;
+                frame_meta.n = frame.n;
+                frame_meta.timestamp_ns = grab_timestamp_ns;
+                frame_meta.host_uptime_s = readHostUptime();
+                frame_meta.since_camera_open_s =
+                    std::chrono::duration<double>(std::chrono::steady_clock::now() -
+                                                  camera_opened_at)
+                        .count();
+                read_temperatures(frame_meta);
+                capture_meta.frames.push_back(frame_meta);
+                write_meta();
                 std::cout << " * Images saved: '" << rel_l << "' and '" << rel_r
                           << "' (" << frame.left.tags.size() << " + "
                           << frame.right.tags.size() << " tags)" << std::endl;
@@ -1172,6 +1260,7 @@ int main(int argc, char* argv[]) {
 
     // Settings at the end of the collection: they must match the start
     printCameraSettings(zed_camera, "Camera settings (end of collection)");
+    end_meta(end_reason);
 
     // Stop camera acquisition. Ctrl+C gets its default behaviour back, so
     // that it can still interrupt the calibration computation

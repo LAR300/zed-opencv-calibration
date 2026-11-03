@@ -146,7 +146,24 @@
   - **Pronto quando:** numa captura de bancada com 3 pares, `detections.json` tem 3 quadros, inclui
     tags vistas por uma câmera só, e os cantos batem (|Δ| < 1e-6 px) com uma detecção independente
     do PNG pelo C++.
-- [ ] 8. **Metadados ao vivo** (R8, R9). Timestamp do SDK, uptime de `/proc/uptime`, tempo desde a
+- [x] 8. **Metadados ao vivo** (R8, R9). No modo sessão, o `meta.json` é preenchido ao abrir a
+  câmera e regravado a cada par e no fim da coleta, também quando ela é abortada.
+  - Câmera: modelo, serial, firmware, resolução, fps e lente.
+  - Versão do SDK, commit e flag de árvore suja (de `build_info.hpp`), e o host.
+  - A autocalibração desligada e a sessão copiada.
+  - Os controles de captura no início e no fim, o horário UTC e o motivo do fim.
+  - Por par: timestamp da imagem (do `grab`), uptime do host, tempo desde a abertura e as
+    temperaturas `ONBOARD_LEFT/RIGHT` e `IMU`, lidas com `getSensorsData`.
+
+  **Bancada (2026-11-03),** `testes_persistencia/teste_etapa8/captura_01`: todos os campos
+  preenchidos (SDK 5.1.0, firmware 1523, temperaturas 29,4 / 30,2 / 30,4 °C, controles iguais no
+  início e no fim, motivo "aborted by the user").
+  - O HID estava acessível nesta sessão, por uma correção manual anterior. Por isso o caminho sem
+    permissão (temperatura `null` e um aviso único) **não foi exercitado na bancada**. A escrita
+    de `null` está coberta por `meta_writes_nulls_for_missing_temperatures`. Ele será exercitado
+    quando o `ambiente-sensores` for validado.
+
+  Especificação original da etapa: Timestamp do SDK, uptime de `/proc/uptime`, tempo desde a
   abertura, temperaturas com `getSensorsData`, controles de captura no início e no fim, motivo do
   encerramento.
   - **Pronto quando:** numa captura de bancada todos os campos estão preenchidos. Com o HID sem
