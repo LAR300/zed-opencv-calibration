@@ -82,7 +82,15 @@
   - Testes primeiro: com as temperaturas ausentes, o JSON tem `null` nos três campos; a sessão
     aparece copiada.
   - **Pronto quando:** `ctest` verde e `json.load` lê o arquivo.
-- [ ] 5. **Commit no build** (condições de implementação). O CMake gera `build_info.hpp` a cada
+- [x] 5. **Commit no build** (condições de implementação). Feito em `cmake/BuildInfo.cmake`
+  (`zedcal_add_build_info(<alvo>)`) e `cmake/write_build_info.cmake`. Um alvo customizado regrava
+  `build_info.hpp` a cada build, mas só quando o conteúdo muda, e define `ZEDCAL_GIT_COMMIT` e
+  `ZEDCAL_GIT_DIRTY`. A flag "suja" ignora arquivos não versionados. Os testes em
+  `tests/test_build_info.cpp` conferem que o commit gravado é o `HEAD` e que a flag bate com o
+  `git status` (108/108). O commit desta etapa, seguido de um novo build, mudou o SHA gravado e
+  zerou a flag, como esperado. A ferramenta de calibração passa a usar o módulo na etapa 6.
+
+  Especificação original da etapa: O CMake gera `build_info.hpp` a cada
   build, com o SHA e a flag de árvore suja.
   - **Pronto quando:** dois builds seguidos, com um commit vazio entre eles, mostram SHAs
     diferentes no binário. Conferir com `strings` ou com a impressão do `--help`.

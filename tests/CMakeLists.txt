@@ -22,6 +22,8 @@ ADD_EXECUTABLE(aprilgrid_tests ${TEST_SRC_FILES} ${APRILGRID_SRC_FILES}
                ${CAMERA_SETTINGS_SRC_FILES} ${CAPTURE_IO_SRC_FILES})
 
 TARGET_LINK_LIBRARIES(aprilgrid_tests ${OpenCV_LIBRARIES})
+include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/BuildInfo.cmake)
+zedcal_add_build_info(aprilgrid_tests)
 # Lets the tests read files of the repository, such as config/session_example.yaml
 target_compile_definitions(aprilgrid_tests PRIVATE
                            ZEDCAL_SOURCE_DIR="${CMAKE_CURRENT_SOURCE_DIR}/..")
