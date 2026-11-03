@@ -111,7 +111,33 @@
     - a regressão do xadrez é idêntica ao `baseline.yml` (`diff` e `cmp`);
     - uma sessão inválida e uma pasta já usada saem com código 1, sem abrir a câmera;
     - o `--help` documenta a flag.
-- [ ] 7. **Gravação dos pares e das detecções** (R4–R7). No modo sessão:
+- [x] 7. **Gravação dos pares e das detecções** (R4–R7). No modo sessão:
+  - os pares vão para `left/` e `right/` da captura, sem apagar nem criar `zed-images/`;
+  - os PNGs são relidos, as tags de cada câmera são detectadas de novo com os cantos antes e depois
+    do refino (`detectAprilGrid` ganhou o parâmetro opcional `unrefined`), e o `detections.json` é
+    regravado a cada par;
+  - o `session.yaml` é copiado;
+  - o terminal vai para o `capture.log` desde a primeira linha. O `LogTee` guarda em memória o que
+    sai antes de a pasta existir;
+  - a calibração lê os pares da captura e grava o YAML na pasta dela.
+
+  Partes puras em `common/capture_io/capture_support.{hpp,cpp}`, testadas em
+  `tests/test_capture_support.cpp` (113/113). A regressão do xadrez continua idêntica.
+
+  **Bancada (2026-11-03),** com a ZED 2i S/N 35180697, alvo parado, display virtual e
+  `calib_runs/tools/bench_session_capture.sh`. A captura `testes_persistencia/teste_etapa7/captura_02`
+  salvou 1 par com 25 + 26 tags:
+  - 7 tags vistas por uma câmera só ficaram registradas;
+  - `calib_runs/tools/check_detections` detectou os PNGs de novo, com diferença máxima de 0 px nos
+    dois conjuntos de cantos;
+  - o `capture.log` é idêntico à saída do terminal;
+  - o `json.load` do Python lê o arquivo.
+
+  Com a cena parada, só 1 par passa no filtro de dissimilaridade; os outros são recusados como
+  "parecidos demais". O critério original de 3 pares fica para uma captura com o alvo em
+  movimento: o usuário escolheu verificar com o alvo parado.
+
+  Especificação original da etapa: No modo sessão:
   - o par vai para `left/` e `right/`;
   - o PNG é relido e detectado de novo por câmera (todas as tags), e o resultado vai para o
     `DetectionsWriter`;

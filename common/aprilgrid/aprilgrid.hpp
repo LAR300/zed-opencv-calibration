@@ -75,9 +75,12 @@ constexpr float MIN_TAG_SIDE_PX = 10.0f;
 // whose ID belongs to the grid are returned; an ID detected more than once
 // (e.g. a reflection) is discarded. Corners are refined on the X-junctions
 // with the Kalibr corner squares (decisions.md D11).
+// If 'unrefined' is given, it receives the same tags with the corners as
+// returned by the ArUco detector, before the refinement.
 TagDetections detectAprilGrid(
     const cv::Mat& image, const AprilGridTarget& target,
-    const cv::Ptr<cv::aruco::DetectorParameters>& params);
+    const cv::Ptr<cv::aruco::DetectorParameters>& params,
+    TagDetections* unrefined = nullptr);
 
 // Minimum tags for a valid sample (spec R7), seen by both cameras. All three
 // can be changed from the command line.

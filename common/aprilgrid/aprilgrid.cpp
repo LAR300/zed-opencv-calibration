@@ -271,7 +271,9 @@ bool loadDetectorParameters(const std::string& path,
 
 TagDetections detectAprilGrid(
     const cv::Mat& image, const AprilGridTarget& target,
-    const cv::Ptr<cv::aruco::DetectorParameters>& params) {
+    const cv::Ptr<cv::aruco::DetectorParameters>& params,
+    TagDetections* unrefined) {
+  if (unrefined) unrefined->clear();
   cv::Mat gray;
   if (image.channels() == 3)
     cv::cvtColor(image, gray, cv::COLOR_BGR2GRAY);
@@ -305,6 +307,7 @@ TagDetections detectAprilGrid(
     // square. The window reaches the junction from the contour estimate but
     // stays clear of the data bits, which start at 0.2 x the tag side.
     const int win = std::max(2, cvRound(0.15f * min_side));
+    if (unrefined) (*unrefined)[id] = corners[i];
     cv::cornerSubPix(gray, corners[i], cv::Size(win, win), cv::Size(-1, -1),
                      cv::TermCriteria(cv::TermCriteria::EPS |
                                           cv::TermCriteria::MAX_ITER,

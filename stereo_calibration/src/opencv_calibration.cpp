@@ -9,17 +9,26 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
               int h_edges, int v_edges, double square_size, int serial,
               bool is_dual_mono, bool is_4k, bool save_calib_mono,
               bool use_intrinsic_prior, double max_repr_error, bool verbose,
-              const AprilGridOptions* aprilgrid) {
+              const AprilGridOptions* aprilgrid,
+              const std::vector<std::pair<std::string, std::string>>* image_files,
+              const std::string& output_dir) {
   std::vector<cv::Mat> left_images, right_images;
 
   /// Read images
   cv::Size imageSize = cv::Size(0, 0);
 
-  std::cout << std::endl
-            << "Loading the stored images from folder: " << folder << std::endl;
+  if (image_files) {
+    std::cout << std::endl
+              << "Loading the " << image_files->size()
+              << " stored image pairs of the capture" << std::endl;
+    img_count = static_cast<int>(image_files->size());
+  } else {
+    std::cout << std::endl
+              << "Loading the stored images from folder: " << folder << std::endl;
+  }
 
   // Count images in the folder
-  if (img_count==-1) {
+  if (!image_files && img_count==-1) {
     std::cout << " * Counting images in the folder..." << std::endl;
     int actual_img_count = 0;
     while(1) {
@@ -37,12 +46,14 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
 
   for (int i = 0; i < img_count; i++) {
     std::cout << "." << std::flush;
-    cv::Mat grey_l =
-        cv::imread(folder + "image_left_" + std::to_string(i) + ".png",
-                   cv::IMREAD_GRAYSCALE);
-    cv::Mat grey_r =
-        cv::imread(folder + "image_right_" + std::to_string(i) + ".png",
-                   cv::IMREAD_GRAYSCALE);
+    const std::string left_path =
+        image_files ? image_files->at(i).first
+                    : folder + "image_left_" + std::to_string(i) + ".png";
+    const std::string right_path =
+        image_files ? image_files->at(i).second
+                    : folder + "image_right_" + std::to_string(i) + ".png";
+    cv::Mat grey_l = cv::imread(left_path, cv::IMREAD_GRAYSCALE);
+    cv::Mat grey_r = cv::imread(right_path, cv::IMREAD_GRAYSCALE);
 
     if (!grey_l.empty() && !grey_r.empty()) {
       if (imageSize.width == 0)
@@ -428,7 +439,7 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
 
   std::cout << std::endl << "*** Save Calibration files ***" << std::endl;
 
-  std::string opencv_file = calib_data.saveCalibOpenCV(serial);
+  std::string opencv_file = calib_data.saveCalibOpenCV(serial, output_dir);
   if (!opencv_file.empty()) {
     std::cout << " * OpenCV calibration file saved: " << opencv_file
               << std::endl;
@@ -439,7 +450,7 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
 
   // SDK format is only supported for dual-mono setups
   if (is_dual_mono) {
-    std::string zed_file = calib_data.saveCalibZED(serial, is_4k);
+    std::string zed_file = calib_data.saveCalibZED(serial, is_4k, output_dir);
     if (!zed_file.empty()) {
       std::cout << " * ZED SDK calibration file saved: " << zed_file
                 << std::endl;
@@ -452,9 +463,10 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
   return EXIT_SUCCESS;
 }
 
-std::string StereoCalib::saveCalibOpenCV(int serial) {
+std::string StereoCalib::saveCalibOpenCV(int serial, const std::string& output_dir) {
   std::string calib_filename =
-      "zed_calibration_" + std::to_string(serial) + ".yml";
+      (output_dir.empty() ? std::string() : output_dir + "/") + "zed_calibration_" +
+      std::to_string(serial) + ".yml";
 
   cv::FileStorage fs(calib_filename, cv::FileStorage::WRITE);
   if (fs.isOpened()) {
@@ -496,8 +508,9 @@ void printDisto(const CameraCalib& calib, std::ofstream& outfile) {
   outfile << "\n";
 }
 
-std::string StereoCalib::saveCalibZED(int serial, bool is_4k) {
-  std::string calib_filename = "SN" + std::to_string(serial) + ".conf";
+std::string StereoCalib::saveCalibZED(int serial, bool is_4k, const std::string& output_dir) {
+  std::string calib_filename = (output_dir.empty() ? std::string() : output_dir + "/") +
+                               "SN" + std::to_string(serial) + ".conf";
 
   // Write parameters to a text file
   std::ofstream outfile(calib_filename);

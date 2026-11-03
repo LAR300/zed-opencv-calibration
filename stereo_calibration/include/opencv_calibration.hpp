@@ -223,8 +223,10 @@ struct StereoCalib {
     return rms;
   }
 
-  std::string saveCalibOpenCV(int serial);
-  std::string saveCalibZED(int serial, bool is_4k = false);
+  // Files go to 'output_dir' (the current folder when empty)
+  std::string saveCalibOpenCV(int serial, const std::string &output_dir = "");
+  std::string saveCalibZED(int serial, bool is_4k = false,
+                           const std::string &output_dir = "");
 };
 
 int calibrate(int img_count, const std::string &folder, StereoCalib &raw_data,
@@ -232,4 +234,7 @@ int calibrate(int img_count, const std::string &folder, StereoCalib &raw_data,
               bool is_dual_mono, bool is_4k, bool save_calib_mono = false,
               bool use_intrinsic_prior = false, double max_repr_error = 0.5f,
               bool verbose = false,
-              const AprilGridOptions *aprilgrid = nullptr);  // nullptr: checkerboard
+              const AprilGridOptions *aprilgrid = nullptr,  // nullptr: checkerboard
+              // Image pairs to load instead of <folder>/image_{left,right}_<n>.png
+              const std::vector<std::pair<std::string, std::string>> *image_files = nullptr,
+              const std::string &output_dir = "");  // where the calibration is written

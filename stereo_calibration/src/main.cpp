@@ -2,11 +2,14 @@
 #include <filesystem>
 #include <iomanip>
 #include <limits>
+#include <memory>
 #include <sstream>
 
 #include "aprilgrid.hpp"
 #include "calibration_checker.hpp"
 #include "capture_dir.hpp"
+#include "capture_support.hpp"
+#include "detections_io.hpp"
 #include "opencv_calibration.hpp"
 #include "sample_limits.hpp"
 #include "session.hpp"
@@ -283,6 +286,11 @@ int main(int argc, char* argv[]) {
   Args args;
   args.parse(argc, argv);
 
+  // Session mode: the terminal output is kept from the first line, and goes
+  // to capture.log once the capture folder exists
+  std::unique_ptr<LogTee> log_tee;
+  if (!args.session_file.empty()) log_tee = std::make_unique<LogTee>();
+
   std::cout << "*** Stereo Camera Calibration Tool ***" << std::endl;
   std::cout << std::endl;
 
@@ -395,6 +403,17 @@ int main(int argc, char* argv[]) {
       std::cerr << "Error: " << error << std::endl;
       return EXIT_FAILURE;
     }
+    if (!log_tee->attachFile(capture_dir + "/capture.log", error)) {
+      std::cerr << "Error: " << error << std::endl;
+      return EXIT_FAILURE;
+    }
+    std::error_code copy_error;
+    fs::copy_file(args.session_file, capture_dir + "/session.yaml", copy_error);
+    if (copy_error) {
+      std::cerr << "Error: cannot copy the session file to " << capture_dir
+                << ": " << copy_error.message() << std::endl;
+      return EXIT_FAILURE;
+    }
     std::cout << " * Session: " << args.session_file << std::endl;
     std::cout << "   - Condition: " << session.condition << ", capture "
               << session.capture << ", lens " << session.lens << std::endl;
@@ -414,6 +433,10 @@ int main(int argc, char* argv[]) {
   std::cout << " * Lens distorsion model: "
             << (args.is_radtan_lens ? "Radial-Tangential" : "Fisheye")
             << std::endl;
+
+  // Session mode: the saved pairs and their detections
+  std::vector<std::pair<std::string, std::string>> session_images;
+  std::unique_ptr<DetectionsWriter> detections_writer;
 
   // Status variables
   int image_count = -1;
@@ -603,8 +626,14 @@ int main(int argc, char* argv[]) {
       }
     }
 
-    // Check if the temp image folder exists and clear it
-    if (fs::exists(image_folder)) {
+    if (use_session)
+      detections_writer = std::make_unique<DetectionsWriter>(aprilgridDetectionsHeader(
+          aprilgrid, cv::Size(camera_resolution.width, camera_resolution.height),
+          args.target_yaml));
+
+    // Check if the temp image folder exists and clear it (not in the session
+    // mode, which never deletes anything)
+    if (!use_session && fs::exists(image_folder)) {
       std::uintmax_t n{fs::remove_all(image_folder)};
       if (verbose) {
         std::cout
@@ -614,7 +643,7 @@ int main(int argc, char* argv[]) {
       }
     }
     // Create the temp image folder
-    if (!fs::create_directories(image_folder)) {
+    if (!use_session && !fs::create_directories(image_folder)) {
       std::cerr << "Error creating storage folder!";
       return 1;
     }
@@ -1021,18 +1050,56 @@ int main(int argc, char* argv[]) {
               if (image_count < 0) {
                 image_count = 0;
               }
-              cv::imwrite(image_folder + "image_left_" +
-                              std::to_string(image_count) + ".png",
-                          rgb_l);
-              cv::imwrite(image_folder + "image_right_" +
-                              std::to_string(image_count) + ".png",
-                          rgb_r);
-              std::cout << " * Images saved: '"
-                        << image_folder + "image_left_" +
-                               std::to_string(image_count) + ".png' and '"
-                        << image_folder + "image_right_" +
-                               std::to_string(image_count) + ".png'"
-                        << std::endl;
+              if (use_session) {
+                // Pair, then the detections of the saved files, read back as
+                // the calibration reads them (persistencia-captura R4-R7)
+                std::string rel_l, rel_r, io_error;
+                relativeImagePath("left", "free", image_count, rel_l, io_error);
+                relativeImagePath("right", "free", image_count, rel_r, io_error);
+                const std::string path_l = capture_dir + "/" + rel_l;
+                const std::string path_r = capture_dir + "/" + rel_r;
+                if (!cv::imwrite(path_l, rgb_l) || !cv::imwrite(path_r, rgb_r)) {
+                  std::cerr << "Error: cannot write " << path_l << " or " << path_r
+                            << std::endl;
+                  settings_guard.restore();
+                  zed_camera.close();
+                  return EXIT_FAILURE;
+                }
+                TagDetections raw_l, raw_r;
+                const TagDetections saved_l = detectAprilGrid(
+                    cv::imread(path_l, cv::IMREAD_GRAYSCALE), aprilgrid.target,
+                    aprilgrid.detector_params, &raw_l);
+                const TagDetections saved_r = detectAprilGrid(
+                    cv::imread(path_r, cv::IMREAD_GRAYSCALE), aprilgrid.target,
+                    aprilgrid.detector_params, &raw_r);
+                FrameDetections frame;
+                frame.pose_id = "free";
+                frame.n = image_count;
+                frame.file_left = rel_l;
+                frame.file_right = rel_r;
+                frame.left = cameraDetectionsFromTags(saved_l, raw_l);
+                frame.right = cameraDetectionsFromTags(saved_r, raw_r);
+                detections_writer->addFrame(frame);
+                if (!detections_writer->write(capture_dir + "/detections.json", io_error))
+                  std::cerr << "  ! " << io_error << std::endl;
+                session_images.emplace_back(path_l, path_r);
+                std::cout << " * Images saved: '" << rel_l << "' and '" << rel_r
+                          << "' (" << frame.left.tags.size() << " + "
+                          << frame.right.tags.size() << " tags)" << std::endl;
+              } else {
+                cv::imwrite(image_folder + "image_left_" +
+                                std::to_string(image_count) + ".png",
+                            rgb_l);
+                cv::imwrite(image_folder + "image_right_" +
+                                std::to_string(image_count) + ".png",
+                            rgb_r);
+                std::cout << " * Images saved: '"
+                          << image_folder + "image_left_" +
+                                 std::to_string(image_count) + ".png' and '"
+                          << image_folder + "image_right_" +
+                                 std::to_string(image_count) + ".png'"
+                          << std::endl;
+              }
               image_count++;
 
               // The checker only reports complete metrics; the maximum is
@@ -1118,7 +1185,8 @@ int main(int argc, char* argv[]) {
       calibrate(image_count, image_folder, calib, h_edges, v_edges, square_size,
                 zed_info.serial_number, is_dual_mono_camera, is_4k_camera,
                 false, can_use_calib_prior, max_repr_error, verbose,
-                use_aprilgrid ? &aprilgrid : nullptr);
+                use_aprilgrid ? &aprilgrid : nullptr,
+                use_session ? &session_images : nullptr, capture_dir);
   if (err == EXIT_SUCCESS)
     std::cout << std::endl
               << " +++++ Calibration successful +++++" << std::endl;
