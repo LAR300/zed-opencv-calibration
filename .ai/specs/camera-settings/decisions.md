@@ -50,6 +50,11 @@
 - **Por quê:** garante R8 (voltar ao estado anterior) mesmo com os acoplamentos.
 - **Consequências:** `AEC_AGC: 0` sozinho, sem `EXPOSURE` nem `GAIN`, é aceito: congela os valores que
   o automático escolheu naquele instante. A impressão de R7 mostra quais foram.
+- **Verificado na etapa 4:** os valores precisam ser restaurados **todos**, inclusive os que um modo
+  automático controla. Na ZED 2i, `WHITEBALANCE_TEMPERATURE` continua reportando o último valor
+  definido mesmo com `WHITEBALANCE_AUTO` de volta em 1, por pelo menos 45 quadros. Uma variante que
+  pulava esses valores deixou 4500 K no lugar de 4700 K e foi descartada. `GAIN` e `EXPOSURE`, ao
+  contrário, acompanham o automático e mudam com a cena.
 
 ### D4. A leitura de volta espera alguns quadros
 
@@ -84,3 +89,16 @@
   calibração. Os controles da ZED X ficam comentados e `LED_STATUS` fica de fora.
 - **Por quê:** o repositório não tem pasta de configuração, e `config/` deixa claro que é ponto de
   partida, não código. O nome com o modelo evita confusão com uma futura ZED X.
+
+### D7. Controles de faixa (`AUTO_*_RANGE`) ficam fora do arquivo
+
+- **Contexto:** a spec (R2) diz que o arquivo usa os nomes de `sl::VIDEO_SETTINGS`, no formato
+  `NOME: valor`. Três controles da ZED X (`AUTO_EXPOSURE_TIME_RANGE`, `AUTO_ANALOG_GAIN_RANGE` e
+  `AUTO_DIGITAL_GAIN_RANGE`) recebem **dois** valores, mínimo e máximo, e não um. Isso apareceu na
+  implementação da etapa 1.
+- **Decisão:** a leitura recusa esses três com a mensagem "takes a min/max range and is not
+  supported by this tool", como faz com `AEC_AGC_ROI`.
+- **Por quê:** eles não existem na ZED 2i, a validação em ZED X é não-objetivo, e aceitá-los exigiria
+  outro formato de valor só para eles.
+- **Consequências:** se um dia uma ZED X for calibrada, esses controles precisam de uma extensão do
+  formato.

@@ -17,7 +17,7 @@
 
 ### Fase A — leitura do arquivo (TDD, sem câmera)
 
-- [ ] 1. **Leitura e nomes** (D1; R2, R4). `common/camera_settings/camera_settings.hpp/.cpp`:
+- [x] 1. **Leitura e nomes** (D1; R2, R4). `common/camera_settings/camera_settings.hpp/.cpp`:
   `loadCameraSettings(path, settings, error)` devolve uma lista de `{nome, valor}`, usando a lista
   dos nomes de `sl::VIDEO_SETTINGS` como strings. Incluir em `tests/CMakeLists.txt`.
   - Testes primeiro:
@@ -29,7 +29,7 @@
     - `SCENE_ILLUMINANCE` recusado como só de leitura;
     - `AEC_AGC_ROI` e `LED_STATUS` recusados como fora de escopo.
   - **Verificação:** `ctest` verde.
-- [ ] 2. **Regras fixas e ordem** (D2, D3; R3). Na mesma leitura:
+- [x] 2. **Regras fixas e ordem** (D2, D3; R3). Na mesma leitura:
   - `AEC_AGC: 1` com `EXPOSURE` ou `GAIN` é recusado;
   - `WHITEBALANCE_AUTO: 1` com `WHITEBALANCE_TEMPERATURE` é recusado;
   - `WHITEBALANCE_TEMPERATURE` fora do passo de 100 é recusado;
@@ -40,7 +40,7 @@
 
 ### Fase B — aplicação na câmera (ZED SDK)
 
-- [ ] 3. **Camada do SDK** (D1–D5). `common/camera_settings/zed_camera_settings.hpp/.cpp`, com:
+- [x] 3. **Camada do SDK** (D1–D5). `common/camera_settings/zed_camera_settings.hpp/.cpp`, com:
   - `snapshot(camera)`: todos os controles suportados;
   - `validateOnCamera(camera, settings, error)`: suporte e faixa;
   - `apply(camera, settings, error)`: aplica, faz alguns `grab()` e lê de volta;
@@ -51,7 +51,7 @@
 
   Incluir nos dois `CMakeLists.txt` das ferramentas.
   - **Verificação:** build sem warnings; `ctest` verde, já que a camada do SDK não entra nos testes.
-- [ ] 4. **`zed_stereo_checker`** (R1, R4–R8, R12 não se aplica). Flag `--camera_settings` e
+- [x] 4. **`zed_stereo_checker`** (R1, R4–R8, R12 não se aplica). Flag `--camera_settings` e
   `--help`. Leitura do arquivo antes de abrir a câmera. Depois de abrir: `snapshot`,
   `validateOnCamera`, `apply` e `print`; **sem o arquivo**, só `print` (R7). O laço trata a flag de
   SIGINT como `q`. Restauração na saída.
@@ -60,7 +60,7 @@
     - com o exemplo da etapa 6, os valores são aplicados e impressos, e o `read_video_settings`
       depois de sair com `q` mostra os valores de antes;
     - Ctrl+C também restaura.
-- [ ] 5. **`zed_stereo_calibration`** (R1, R4–R8, R12). O mesmo da etapa 4, e mais:
+- [x] 5. **`zed_stereo_calibration`** (R1, R4–R8, R12). O mesmo da etapa 4, e mais:
   - restauração em todas as saídas depois de abrir a câmera: `q`, o erro da pasta das imagens, o
     fim da coleta antes do `close()` e a flag de SIGINT;
   - uma segunda impressão ao fim da coleta, para conferir R6;
@@ -76,7 +76,7 @@
 
 ### Fase C — exemplo, validação e acabamento
 
-- [ ] 6. **Arquivo de exemplo** (D6; R9). `config/camera_settings_zed2i.yaml`:
+- [x] 6. **Arquivo de exemplo** (D6; R9). `config/camera_settings_zed2i.yaml`:
   - os valores da tabela da spec, com `EXPOSURE` 50, `GAIN` 1 e `WHITEBALANCE_TEMPERATURE` 4700 em
     manual;
   - um comentário por controle com a faixa e o efeito na calibração (por exemplo, `SHARPNESS` mexe
@@ -94,7 +94,7 @@
     - depois de sair, a câmera volta ao estado de antes.
 - [ ] 8. **Checker com o mesmo arquivo.** Rodar o checker com o arquivo e com a calibração da etapa 7.
   - **Verificação:** os erros aparecem normalmente e o log mostra os controles.
-- [ ] 9. **README** (R10). Seção "Camera settings":
+- [x] 9. **README** (R10). Seção "Camera settings":
   - a opção e o formato, apontando para o exemplo;
   - a impressão no início, com ou sem o arquivo;
   - a restauração ao sair;
