@@ -38,7 +38,13 @@
   - Testes primeiro: o arquivo de exemplo é aceito; cada campo obrigatório removido é recusado com
     mensagem; uma condição com espaço é recusada; um `null` é preservado.
   - **Pronto quando:** `ctest` verde, com os casos acima.
-- [ ] 2. **Caminhos e recusa de sobrescrever** (R3–R5).
+- [x] 2. **Caminhos e recusa de sobrescrever** (R3–R5). Feito em
+  `common/capture_io/capture_dir.{hpp,cpp}`, testes em `tests/test_capture_dir.cpp` (8 casos;
+  88/88 no total). A pasta é recusada também quando só tem `left/` vazio, e quando no lugar dela há
+  um arquivo. O `_` fica reservado como separador em `<pose_id>_<n>.png`, então os ids de pose
+  aceitam só letras, dígitos e `-`, o que cobre todos os ids do roteiro.
+
+  Especificação original da etapa:
   - `captureDir(session)` devolve `<raiz>/<condicao>/captura_<XX>`.
   - `prepareCaptureDir(dir, error)` cria `left/` e `right/`, ou recusa se a pasta existe e não está
     vazia.
