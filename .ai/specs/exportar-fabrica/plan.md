@@ -10,7 +10,17 @@
 
 ## Etapas
 
-- [ ] 1. **Conversão e escrita compartilhadas.** Mover `CameraCalib::setFrom`,
+- [x] 1. **Conversão e escrita compartilhadas.** Feito em `common/calib_io/`:
+  - `opencv_calib_file.{hpp,cpp}`, só com OpenCV: `convertRawParameters`, `writeOpenCVCalibration`,
+    `sameRawParameters` e `modelName`. A recusa dos termos de prisma vale para F. O chute inicial da
+    calibração pode descartá-los;
+  - `zed_raw_parameters.hpp`: copia o `sl::CalibrationParameters` campo a campo.
+
+  O `StereoCalib::setFrom` e o `saveCalibOpenCV` do `zed_stereo_calibration` passaram a usar esse
+  módulo. Os testes estão em `tests/test_calib_file.cpp` (8 casos; 125/125). A regressão do xadrez
+  continua idêntica, o que mostra que o YAML gravado não mudou.
+
+  Especificação original da etapa: Mover `CameraCalib::setFrom`,
   `StereoCalib::setFrom` e `saveCalibOpenCV` para um ponto que as duas ferramentas incluem, sem
   mudar o comportamento. Acrescentar a verificação de `disto[8..11]` (R3).
   - Testes primeiro: uma `sl::CalibrationParameters` montada à mão com Tx = 120 dá `T[0] = −120`;

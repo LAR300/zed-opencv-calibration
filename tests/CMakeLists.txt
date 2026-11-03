@@ -12,14 +12,17 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/aprilgrid)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../stereo_calibration/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/camera_settings)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/capture_io)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/calib_io)
 
 FILE(GLOB_RECURSE TEST_SRC_FILES "*.cpp")
 FILE(GLOB_RECURSE APRILGRID_SRC_FILES "../common/aprilgrid/*.cpp")
 # Only the OpenCV part of camera_settings: zed_camera_settings.cpp needs the ZED SDK
 set(CAMERA_SETTINGS_SRC_FILES ../common/camera_settings/camera_settings.cpp)
 FILE(GLOB_RECURSE CAPTURE_IO_SRC_FILES "../common/capture_io/*.cpp")
+# Only the OpenCV part of calib_io: zed_raw_parameters.hpp needs the ZED SDK
+set(CALIB_IO_SRC_FILES ../common/calib_io/opencv_calib_file.cpp)
 ADD_EXECUTABLE(aprilgrid_tests ${TEST_SRC_FILES} ${APRILGRID_SRC_FILES}
-               ${CAMERA_SETTINGS_SRC_FILES} ${CAPTURE_IO_SRC_FILES})
+               ${CAMERA_SETTINGS_SRC_FILES} ${CAPTURE_IO_SRC_FILES} ${CALIB_IO_SRC_FILES})
 
 TARGET_LINK_LIBRARIES(aprilgrid_tests ${OpenCV_LIBRARIES})
 include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/BuildInfo.cmake)

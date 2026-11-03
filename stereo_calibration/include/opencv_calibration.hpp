@@ -7,6 +7,8 @@
 #include <sl/CameraOne.hpp>
 
 #include "aprilgrid.hpp"
+#include "opencv_calib_file.hpp"
+#include "zed_raw_parameters.hpp"
 
 constexpr int MIN_IMAGE = 20;
 
@@ -138,21 +140,27 @@ struct StereoCalib {
     T = cv::Mat::zeros(3, 1, CV_64FC1);
   }
 
-  void setFrom(const sl::CalibrationParameters &calib_params) {
-    left.setFrom(calib_params.left_cam);
-    right.setFrom(calib_params.right_cam);
-
-    auto translation = calib_params.stereo_transform.getTranslation();
-    T.at<double>(0) = translation.x * -1;  // the zed configuration file store
-                                          // the absolute value of the Tx part
-    T.at<double>(1) = translation.y;
-    T.at<double>(2) = translation.z;
-
-    auto rot = calib_params.stereo_transform.getRotationVector();
-    Rv.at<double>(0) = rot.x;
-    Rv.at<double>(1) = rot.y;
-    Rv.at<double>(2) = rot.z;
+  // The factory calibration as the initial guess. The conversion is the one
+  // zed_export_factory uses (common/calib_io); prism terms, if any, are
+  // dropped, since this is only a starting point. Returns false if the two
+  // cameras use different distortion models.
+  bool setFrom(const sl::CalibrationParameters &calib_params) {
+    OpenCVStereoCalibration c;
+    std::string error;
+    if (!convertRawParameters(rawStereoParametersFrom(calib_params), true, c, error)) {
+      std::cerr << " ! Factory calibration not usable as a prior: " << error << std::endl;
+      return false;
+    }
+    left.K = c.K_left;
+    left.D = c.D_left;
+    left.disto_model_RadTan = !c.fisheye;
+    right.K = c.K_right;
+    right.D = c.D_right;
+    right.disto_model_RadTan = !c.fisheye;
+    T = c.T;
+    Rv = c.Rv;
     cv::Rodrigues(Rv, R);
+    return true;
   }
 
   // Note: object_points and image_points must be point3f. Point3d format is not

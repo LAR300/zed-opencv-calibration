@@ -18,13 +18,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/aprilgrid)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/camera_settings)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/capture_io)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/calib_io)
 
 link_directories(${ZED_LIBRARY_DIR})
 link_directories(${OpenCV_LIBRARY_DIRS})
 link_directories(${CUDA_LIBRARY_DIRS})
 
 FILE(GLOB_RECURSE SRC_FILES "src/*.cpp" "../common/aprilgrid/*.cpp" "../common/camera_settings/*.cpp"
-     "../common/capture_io/*.cpp")
+     "../common/capture_io/*.cpp" "../common/calib_io/*.cpp")
 FILE(GLOB_RECURSE HDR_FILES "include/*.hpp")
 ADD_EXECUTABLE(${PROJECT_NAME} ${HDR_FILES} ${SRC_FILES})
 

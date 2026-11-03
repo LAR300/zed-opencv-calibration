@@ -455,23 +455,19 @@ std::string StereoCalib::saveCalibOpenCV(int serial, const std::string& output_d
       (output_dir.empty() ? std::string() : output_dir + "/") + "zed_calibration_" +
       std::to_string(serial) + ".yml";
 
-  cv::FileStorage fs(calib_filename, cv::FileStorage::WRITE);
-  if (fs.isOpened()) {
-    fs << "Size" << imageSize;
-    fs << "K_LEFT" << left.K << "K_RIGHT" << right.K;
-
-    if (left.disto_model_RadTan) {
-      fs << "D_LEFT" << left.D << "D_RIGHT" << right.D;
-    } else {
-      fs << "D_LEFT_FE" << left.D << "D_RIGHT_FE" << right.D;
-    }
-
-    fs << "R" << Rv << "T" << T;
-    fs.release();
-
-    return calib_filename;
-  }
-
+  // Same writer as zed_export_factory (common/calib_io)
+  OpenCVStereoCalibration c;
+  c.image_size = imageSize;
+  c.fisheye = !left.disto_model_RadTan;
+  c.K_left = left.K;
+  c.D_left = left.D;
+  c.K_right = right.K;
+  c.D_right = right.D;
+  c.Rv = Rv;
+  c.T = T;
+  std::string error;
+  if (writeOpenCVCalibration(calib_filename, c, false, error)) return calib_filename;
+  std::cerr << " !!! " << error << std::endl;
   return std::string();
 }
 

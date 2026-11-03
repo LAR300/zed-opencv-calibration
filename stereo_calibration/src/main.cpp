@@ -687,11 +687,14 @@ int main(int argc, char* argv[]) {
 
     can_use_calib_prior = status != sl::ERROR_CODE::INVALID_CALIBRATION_FILE;
 
+    if (can_use_calib_prior &&
+        !calib.setFrom(zed_info.camera_configuration.calibration_parameters_raw)) {
+      can_use_calib_prior = false;
+      calib.initDefault(args.is_radtan_lens);
+    }
+
     std::cout << " * Using prior calibration: "
               << (can_use_calib_prior ? "Yes" : "No") << std::endl;
-
-    if (can_use_calib_prior)
-      calib.setFrom(zed_info.camera_configuration.calibration_parameters_raw);
 
     sl::Resolution camera_resolution = zed_info.camera_configuration.resolution;
 
