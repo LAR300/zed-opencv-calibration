@@ -1,7 +1,8 @@
 # Validação — calibração estéreo da ZED 2i: xadrez, AprilGrid e fábrica
 
 > Evidência dos critérios de aceitação de [`spec.md`](spec.md). A Parte 1 é a linha de base com
-> xadrez (anterior à feature); a Parte 2 valida o alvo AprilGrid.
+> xadrez (anterior à feature); a Parte 2 valida o alvo AprilGrid. As Partes 3 e 4 trazem as rodadas
+> seguintes (com acrílico e com controles fixos), e o Anexo a transformada câmera → IMU.
 >
 > **Dados:** as imagens, logs e calibrações citadas ficam no workspace da bancada, em
 > `ros2_ws/dev/calib_runs/` (fora deste repositório, ao lado dele) — não vêm com o clone.
@@ -238,3 +239,114 @@ que as outras duas.
   focal certa.
 - `petro_data_replayer/calibrate_intrinsics.py` usa o detector sem essa correção. As calibrações
   `zed_opencv_calibration_cesar_00{1,2}.yaml` (RMS de 0,94 px) provavelmente carregam esse viés.
+
+---
+
+# Parte 3 — Calibração através do acrílico do cilindro, no ar
+
+| | |
+|---|---|
+| **Data** | 2026-10-23 |
+| **Montagem** | o acrílico do cilindro subaquático na frente da ZED 2i, no ar |
+| **Execução** | `calib_runs/2026-10-23_acrilico_ar_aprilgrid/` (35 amostras, terminou pelo máximo; inclinação mediana de 26°, 18 de 35 acima de 25°) |
+
+| Parâmetro | Sem acrílico (v2) | Com acrílico | Δ |
+|---|---:|---:|---:|
+| fx L / fy L | 534,48 / 535,58 | 534,26 / 535,87 | −0,04 % / +0,06 % |
+| fx R / fy R | 534,02 / 535,21 | 533,85 / 535,45 | −0,03 % / +0,05 % |
+| cx / cy L | 631,1 / 371,2 | 632,8 / 370,0 | +1,7 / −1,2 px |
+| cx / cy R | 641,1 / 372,3 | 642,9 / 371,4 | +1,8 / −1,0 px |
+| Baseline | 120,12 mm | 120,26 mm | +0,11 % |
+| RMS L / R / Stereo | 0,314 / 0,309 / 0,316 px | 0,367 / 0,360 / 0,369 px | |
+
+Validação cruzada, com o erro Stereo mediano em px:
+
+| Calibração | Imagens com acrílico | Imagens sem acrílico |
+|---|---:|---:|
+| Fábrica | 0,642 | 0,394 |
+| Sem acrílico (v2) | 0,533 | **0,319** |
+| Com acrílico | **0,344** | 0,486 |
+
+- **No ar, o acrílico não muda a focal nem a distorção de cada câmera.** O erro mono quase não muda
+  (0,32–0,34 px em todos os casos). As diferenças de cx e cy estão dentro da variação normal entre
+  calibrações.
+- **Ele muda o alinhamento fino entre as duas câmeras.** Cada calibração é a melhor nos dados da sua
+  condição, com uma diferença bem maior que a variação entre rodadas sem acrílico. Cada lente
+  enxerga através de um pedaço diferente do acrílico. Na prática isso dá ~0,2 px de disparidade, ou
+  ~1 % de profundidade a 3 m. **Com o acrílico montado, use a calibração feita com ele.**
+- **A distância da lente ao acrílico quase não importa no ar** (placa de faces paralelas). Na água
+  ela passa a importar: o pinhole vira aproximação, e o erro cresce com a distância da lente ao
+  acrílico.
+- **Esta calibração não serve debaixo d'água**, onde a focal efetiva cresce ~1,33×. Ela mostra que a
+  montagem e a detecção funcionam através do acrílico.
+
+---
+
+# Parte 4 — Controles de captura fixos e o fy/fx das calibrações AprilGrid
+
+| | |
+|---|---|
+| **Data** | 2026-11-03 |
+| **Execução** | `calib_runs/2026-11-03_camera_settings/`, com `config/camera_settings_zed2i.yaml` sem alterações (`EXPOSURE 50`, `GAIN 1`, WB 4700 K, manuais) |
+| **Coleta** | 25 amostras, terminou pelas métricas; mediana de 27 tags por vista |
+
+| Parâmetro | Valor | vs fábrica | vs xadrez | vs v2 |
+|---|---:|---:|---:|---:|
+| fx L / fx R | 535,49 / 535,37 | +0,31 % / +0,38 % | +0,46 % / +0,48 % | +0,19 % / +0,25 % |
+| fy L / fy R | 536,99 / 536,90 | **+0,59 % / +0,65 %** | +0,68 % / +0,73 % | +0,27 % / +0,32 % |
+| Baseline | 120,22 mm | +0,20 % | +0,15 % | +0,08 % |
+| RMS L / R / Stereo | 0,305 / 0,310 / 0,311 px | | | |
+
+- Os controles ficaram iguais do início ao fim da coleta, e a câmera foi restaurada ao sair. A
+  ferramenta funcionou (spec `camera-settings`).
+- fy passou do limite de 0,5 % da fábrica. Na validação cruzada a calibração é tão boa quanto a v2:
+  Stereo de 0,322 px contra 0,319 px nas imagens da v2.
+
+## O fy/fx das calibrações AprilGrid
+
+| Calibração | fy/fx |
+|---|---:|
+| Fábrica | +0,005 % |
+| Xadrez | +0,065 % |
+| AprilGrid v2 | +0,205 % |
+| AprilGrid com acrílico | +0,302 % |
+| AprilGrid com controles fixos | +0,281 % |
+
+Todas as calibrações AprilGrid dão fy 0,2–0,3 % maior que fx; a de fábrica e a de xadrez, não.
+**O usuário mediu de novo a placa em 2026-11-03 e confirmou as medidas corretas.** Isso enfraquece
+a hipótese de uma escala vertical diferente da horizontal na impressão. As hipóteses que restam,
+ainda não investigadas, são:
+- **o conjunto de imagens:** a distribuição de inclinações em torno de cada eixo é diferente entre o
+  AprilGrid, de 66 cm e geralmente apoiado no chão, e o xadrez A4, segurado na mão;
+- **um viés vertical na localização dos cantos** das tags.
+
+Um teste seria calibrar com o AprilGrid girado 90° na metade das amostras: se o fy/fx acompanhar o
+giro, a causa está no alvo ou na detecção; se não, está na distribuição de poses.
+
+---
+
+# Anexo — Transformada câmera esquerda → IMU (de fábrica)
+
+Lida em 2026-10-23 do tópico `/zed/zed_node/left_cam_imu_transform` (`geometry_msgs/TransformStamped`)
+do `zed-ros2-wrapper`, ZED 2i S/N 35180697. É a pose da IMU em relação à câmera esquerda. A mensagem
+original está em `calib_runs/zed_imu_tf/left_cam_imu_transform.txt`.
+
+```yaml
+frame_id: zed_left_camera_frame        # convenção ROS: x para frente, y para a esquerda, z para cima
+child_frame_id: zed_imu_link
+translation: {x: -0.0020000, y: -0.0230610, z: 0.0002170}       # m
+rotation:    {x: -0.0013455, y: -0.0014975, z: -0.0037673, w: 0.9999908}
+```
+
+- Roll / pitch / yaw: −0,154° / −0,172° / −0,432° (−0,002680 / −0,003005 / −0,007531 rad).
+- A IMU fica 23 mm à direita da câmera esquerda, quase alinhada com ela.
+- Para o frame óptico (z para frente, como no Kalibr e no OpenCV), componha com a rotação fixa
+  `zed_left_camera_frame` → `zed_left_camera_frame_optical`.
+
+Matriz `T_left_imu` (pontos da IMU → frame da câmera esquerda):
+```
+[ 0.999967   0.007539  -0.002985  -0.002000]
+[-0.007531   0.999968   0.002702  -0.023061]
+[ 0.003005  -0.002680   0.999992   0.000217]
+[ 0         0          0          1       ]
+```

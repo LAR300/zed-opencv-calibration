@@ -99,7 +99,7 @@
   `meetsMinimum`, montar `object_points`/`pts_l`/`pts_r`; frame recusado reporta o motivo. Resto
   (mono, rejeição de outliers, estéreo, relatório, `.yml`) intocado.
   - **Verificação:** etapa 1 de novo (regressão idêntica). Ramo AprilGrid verificado na etapa 12.
-- [ ] 11. **`zed_stereo_calibration` ao vivo com AprilGrid** (R1–R3, R7, R8, R10–R12, R15).
+- [x] 11. **`zed_stereo_calibration` ao vivo com AprilGrid** (R1–R3, R7, R8, R10–R12, R15).
   Flags e `--help` como na etapa 8; impressão do alvo; detecção em resolução cheia; aceitação pelas
   tags comuns + mínimo, com nova mensagem de recusa (motivo + nº de tags) no padrão das existentes;
   `checker.testSample` com os cantos virtuais; `addNewCheckerboardPoly` com os cantos virtuais;
@@ -111,7 +111,7 @@
 
 ### Fase E — validação e acabamento
 
-- [ ] 12. **Validação no ar** (critérios de aceitação). Em `$RUN_DIR/<data>_ar_aprilgrid/`, com o
+- [x] 12. **Validação no ar** (critérios de aceitação). Em `$RUN_DIR/<data>_ar_aprilgrid/`, com o
   `target.yaml` medido: calibração completa ao vivo; depois `--use_stored_values` sobre as mesmas
   imagens em subpasta; depois checker com `--calib_opencv` do resultado e com a calibração interna.
   - **Verificação:** RMS L/R/Stereo < 0,5 px; fx, fy (L e R) ≤ 0,5 % do xadrez (`baseline.yml`) **e**
@@ -129,7 +129,7 @@
   `target.yaml`, exemplos, mínimo de tags e flags, `--detector_params`, recomendação de medir o
   alvo impresso; nota sobre `common/` e `BUILD_TESTS`.
   - **Verificação:** os exemplos do README rodam como escritos (copiar e colar no container).
-- [ ] 16. **Fechamento.** Build limpo (`rm -rf build`) das 5 ferramentas com e sem `BUILD_TESTS`;
+- [x] 16. **Fechamento.** Build limpo (`rm -rf build`) das 5 ferramentas com e sem `BUILD_TESTS`;
   `ctest` verde; regressão da etapa 1 idêntica; revisão dos critérios de aceitação da spec um a um.
   - **Verificação:** todos os itens de "Critérios de aceitação" da spec marcados.
 
@@ -144,3 +144,14 @@
 | `tagSize` impresso ≠ nominal | baseline errado com RMS bom | pendência da spec bloqueia a etapa 12; impressão das dimensões ao iniciar (R3); critério do baseline contra xadrez **e** fábrica |
 | Regressão no xadrez por mexer em `CalibrationChecker` e `calibrate()` | resultados do xadrez mudam | etapa 1 repetida após 9, 10 e 16 com `diff` do relatório e do `.yml` |
 | OpenCV com API de `aruco` diferente (4.7+ mudou para `ArucoDetector`) | não compila em outra imagem | alvo é a 4.5.4 do container (amd64 e arm64 usam o mesmo pacote); documentar a versão no README |
+
+## Registro do fechamento (2026-11-03)
+
+- **Etapa 11:** verificada ao vivo nas capturas de 2026-10-20. O mínimo de tags gerou recusas com o
+  motivo; 19 de 35 amostras tinham o alvo cortado; a coleta terminou. A janela não foi reportada
+  como lenta.
+- **Etapa 12:** a primeira captura reprovou em fx/fy por falta de inclinação; a segunda (v2) foi
+  aprovada. Ver Parte 2 de [`validation.md`](validation.md).
+- **Etapa 16:** builds limpos, `ctest` e regressão do xadrez idêntica, repetidos também depois do
+  merge das specs `sample-limits` e `camera-settings` na `develop`.
+- **Critério do checker de fábrica:** atendido pela regra revista em D11, conforme a spec.

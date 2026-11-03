@@ -162,8 +162,11 @@ por um `target.yaml`, e o usa em outras etapas de calibração.
       impressa, conferidos visualmente pelo usuário.
 - [x] **O recálculo é reproduzível.** `--use_stored_values --target_yaml` sobre as imagens da
       execução AprilGrid reproduz o resultado da captura ao vivo.
-- [ ] **O checker funciona com AprilGrid.** Com a calibração de fábrica, o checker mostra Stereo
+- [x] **O checker funciona com AprilGrid.** Com a calibração de fábrica, o checker mostra Stereo
       < 0,5 px nas poses testadas, na mesma faixa obtida com o xadrez (0,25–0,51 px).
+      *Atendido pela regra revista em D11 (decidido em 2026-11-03):* Left/Right < 0,5 px em todas as
+      8 poses; Stereo de 0,292–0,525 px, com 0,515 e 0,525 px em duas poses inclinadas e próximas,
+      dentro do limite revisto de 0,7 px. A calibração de fábrica tem esse limite de perto.
 - [x] **Erros de entrada são claros.** `target.yaml` inexistente, sem campo obrigatório ou com
       `target_type` diferente de `aprilgrid` encerra com mensagem clara e código de saída diferente
       de zero.
@@ -175,7 +178,5 @@ por um `target.yaml`, e o usa em outras etapas de calibração.
 
 - **Resolvido:** o alvo está montado em placa rígida. O `target.yaml` do alvo é o nominal do Kalibr
   (`tagSize: 0.088`, `tagSpacing: 0.3`).
-- NEEDS CLARIFICATION: os 88 mm e os 26,4 mm foram **medidos** na placa ou são os valores do
-  arquivo? No xadrez, a impressão saiu 6,3 % menor que o nominal. Antes da validação, o tamanho da
-  tag precisa ser conferido com régua ao longo de várias tags; se divergir, o `target.yaml` da
-  validação deve trazer o valor medido. Isso bloqueia a validação, não o plano.
+- **Resolvido:** os 88 mm de tag e os 26,4 mm de espaço foram medidos na placa e batem com o
+  nominal. O usuário confirmou em 2026-10-20 e de novo em 2026-11-03.
