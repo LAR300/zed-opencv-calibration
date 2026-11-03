@@ -85,20 +85,23 @@ quando as quatro métricas completam.
 
 ## Critérios de aceitação
 
-- [ ] **Sem opções,** uma coleta que completa as métricas antes de 35 amostras termina sozinha e
+- [x] **Sem opções,** uma coleta que completa as métricas antes de 35 amostras termina sozinha e
       calibra, como hoje.
-- [ ] **Com `--max_samples 26`** e métricas incompletas, a coleta pausa na 26ª amostra e mostra as
+- [x] **Com `--max_samples 26`** e métricas incompletas, a coleta pausa na 26ª amostra e mostra as
       métricas que faltam. `s` continua a coleta e `f` calibra.
-- [ ] **Com `--max_samples 0`,** a coleta passa de 35 amostras e termina só pelas métricas ou por `f`.
-- [ ] **A tecla `f`:** com menos de 20 amostras mostra a mensagem e continua; com 20 ou mais calibra,
+- [x] **Com `--max_samples 0`,** a coleta passa de 35 amostras e termina só pelas métricas ou por `f`.
+- [x] **A tecla `f`:** com menos de 20 amostras mostra a mensagem e continua; com 20 ou mais calibra,
       com o aviso de métricas incompletas quando for o caso.
-- [ ] **Erros:** `--min_samples 10`, `--max_samples 15 --min_samples 25` e valores não numéricos
+- [x] **Erros:** `--min_samples 10`, `--max_samples 15 --min_samples 25` e valores não numéricos
       encerram com mensagem clara e código diferente de zero, sem abrir a câmera.
-- [ ] **O `calib.log`** registra como a coleta terminou, o número de amostras e os scores finais.
-- [ ] **Funciona com xadrez e com AprilGrid.**
-- [ ] **Sem regressão:** o recálculo `--use_stored_values` das imagens de xadrez de 16/10 continua
+- [x] **O `calib.log`** registra como a coleta terminou, o número de amostras e os scores finais.
+- [x] **Funciona com xadrez e com AprilGrid.**
+- [x] **Sem regressão:** o recálculo `--use_stored_values` das imagens de xadrez de 16/10 continua
       idêntico ao `baseline.yml`.
-- [ ] **O README** documenta as opções, a tecla `f` e a pausa.
+- [x] **O README** documenta as opções, a tecla `f` e a pausa.
+
+> Validação: ver "Registro da validação" em [`plan.md`](plan.md). A tecla `f` e o xadrez ao vivo
+> foram aceitos pelo usuário sem teste ao vivo, cobertos pelos testes automáticos e pela regressão.
 
 ## Perguntas em aberto
 

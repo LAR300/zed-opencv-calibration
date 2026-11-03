@@ -73,20 +73,20 @@
 
 ### Fase C — validação com câmera e acabamento
 
-- [ ] 6. **Validação ao vivo, com o usuário** (critérios de aceitação). Com AprilGrid:
+- [x] 6. **Validação ao vivo, com o usuário** (critérios de aceitação). Com AprilGrid:
   1. `--max_samples 26`: a coleta pausa na 26ª amostra com métricas incompletas; `s` retoma sem
      capturar; `f` calibra; o `calib.log` registra o motivo.
   2. `f` com menos de 20 amostras mostra a mensagem; com 20 ou mais calibra, com o aviso.
   3. `--max_samples 0`: passa de 35 amostras.
   4. Sem flags, numa coleta que complete as métricas: termina sozinha.
   - **Verificação:** cada item observado na janela e no `calib.log`.
-- [ ] 7. **Xadrez ao vivo** (critério "funciona com xadrez e AprilGrid"). Uma coleta curta com o
+- [x] 7. **Xadrez ao vivo** (critério "funciona com xadrez e AprilGrid"). Uma coleta curta com o
   tabuleiro de 23,8 mm, usando `f` assim que houver 20 amostras.
   - **Verificação:** calibra e o log registra "manual".
 - [x] 8. **README** (R12). Na seção da calibração estéreo: as flags no bloco de uso, a tecla `f`, a
   pausa no máximo e um exemplo com `--max_samples 0`.
   - **Verificação:** os exemplos rodam como escritos.
-- [ ] 9. **Fechamento.** Build limpo com e sem `BUILD_TESTS`; `ctest` verde; regressão do xadrez
+- [x] 9. **Fechamento.** Build limpo com e sem `BUILD_TESTS`; `ctest` verde; regressão do xadrez
   idêntica; critérios de aceitação da spec conferidos um a um.
 
 ## Riscos
@@ -96,3 +96,17 @@
 | Mudar o laço da janela quebra a captura do xadrez | regressão no fluxo atual | lógica nova em funções testadas (D2); xadrez ao vivo na etapa 7; regressão offline depois de 4, 5 e 9 |
 | `f` pressionado por engano encerra a coleta | calibração com poucas amostras | exige 20 amostras; com métricas incompletas o aviso fica registrado no log |
 | `--max_samples 0` e métricas inalcançáveis | coleta sem fim | o `f` sempre encerra; o painel mostra o score de cada métrica para o usuário decidir |
+
+## Registro da validação (2026-11-03)
+
+- **Testado ao vivo** (`calib_runs/2026-11-03_sample_limits/t1/`), com AprilGrid e `--max_samples 26`:
+  - a coleta pausou na 26ª amostra com "Size 58%" incompleto;
+  - `s` retomou sem salvar o quadro;
+  - a coleta seguiu sem máximo até 55 amostras e terminou pelas métricas, com Stereo de 0,35 px;
+  - a linha `Collection ended` apareceu no log.
+- **Aceito pelo usuário sem teste ao vivo:** a mensagem do `f` com menos de 20 amostras, o `f`
+  encerrando e calibrando, o painel com "no max." e a coleta com xadrez. Essas regras estão
+  cobertas pelos testes automáticos de `tests/test_sample_limits.cpp`, e o xadrez pela regressão
+  offline, que foi idêntica.
+- **Sem câmera:** os erros das flags, o `--help`, o aviso no `--use_stored_values`, os builds limpos,
+  o `ctest` e a regressão do xadrez, todos verificados.
