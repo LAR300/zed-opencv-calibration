@@ -16,9 +16,9 @@
 
 ### Fase A — regras puras (TDD, sem câmera)
 
-- [ ] 1. **Validação dos limites** (D2, D4; R1, R2). Em `stereo_calibration/include/sample_limits.hpp`:
+- [x] 1. **Validação dos limites** (D2, D4; R1, R2). Em `stereo_calibration/include/sample_limits.hpp`:
   `parseSampleCount(text, value, error)` e `validateSampleLimits(min, max, error)`, mais as
-  constantes `DEFAULT_MIN_SAMPLES = 25`, `DEFAULT_MAX_SAMPLES = 35` e
+  constantes `COLLECTION_MIN_SAMPLES = 25`, `COLLECTION_MAX_SAMPLES = 35` e
   `MIN_CALIBRATION_SAMPLES = 20`, que reaproveita `MIN_IMAGE`. Incluir o diretório em
   `tests/CMakeLists.txt`.
   - Testes primeiro:
@@ -27,7 +27,7 @@
     - máximo 0 aceito (sem máximo);
     - máximo 24 com mínimo 25 recusado, e máximo 25 com mínimo 25 aceito.
   - **Verificação:** `ctest` verde.
-- [ ] 2. **Decisão da coleta** (D1, D2; R4–R6). `collectionStep(count, min, max, metrics_complete,
+- [x] 2. **Decisão da coleta** (D1, D2; R4–R6). `collectionStep(count, min, max, metrics_complete,
   max_lifted)` devolve `CONTINUE`, `COMPLETE` ou `PAUSE_AT_MAX`.
   - Testes primeiro:
     - métricas completas com `count >= min` → `COMPLETE`;
@@ -37,7 +37,7 @@
     - `max_lifted` (depois de "continuar") → nunca `PAUSE_AT_MAX`;
     - `count == max` com métricas completas → `COMPLETE`.
   - **Verificação:** `ctest` verde.
-- [ ] 3. **Regra do `f` e texto das métricas incompletas** (R7, R9).
+- [x] 3. **Regra do `f` e texto das métricas incompletas** (R7, R9).
   `canFinishManually(count)` exige pelo menos 20. `incompleteMetrics(scores)` devolve a lista
   "Skew 72%, Size 90%" a partir dos quatro scores.
   - Testes primeiro: 19 recusa e 20 aceita; todos os scores em 1 dá lista vazia; dois incompletos
@@ -46,7 +46,7 @@
 
 ### Fase B — ferramenta
 
-- [ ] 4. **Flags** (R1–R3, R11). No `Args` do `stereo_calibration/src/main.cpp`: `--min_samples` e
+- [x] 4. **Flags** (R1–R3, R11). No `Args` do `stereo_calibration/src/main.cpp`: `--min_samples` e
   `--max_samples` lidos com `parseSampleCount`, mais o registro de que foram passados. A validação
   com `validateSampleLimits` acontece **antes de abrir a câmera**, com saída 1 em caso de erro.
   Também:
@@ -57,7 +57,7 @@
   - com `--use_stored_values`, aviso de que as flags não têm efeito.
   - **Verificação:** `--help`; os casos de erro de R2 com `echo $?` = 1, sem abrir a câmera; o aviso
     no `--use_stored_values`; a regressão do xadrez idêntica ao `baseline.yml`.
-- [ ] 5. **Pausa, tecla `f` e registro final** (D3; R4–R9). No laço:
+- [x] 5. **Pausa, tecla `f` e registro final** (D3; R4–R9). No laço:
   - depois de cada amostra aceita, `collectionStep` decide:
     - `COMPLETE` termina como hoje;
     - `PAUSE_AT_MAX` liga o estado de pausa;
@@ -83,7 +83,7 @@
 - [ ] 7. **Xadrez ao vivo** (critério "funciona com xadrez e AprilGrid"). Uma coleta curta com o
   tabuleiro de 23,8 mm, usando `f` assim que houver 20 amostras.
   - **Verificação:** calibra e o log registra "manual".
-- [ ] 8. **README** (R12). Na seção da calibração estéreo: as flags no bloco de uso, a tecla `f`, a
+- [x] 8. **README** (R12). Na seção da calibração estéreo: as flags no bloco de uso, a tecla `f`, a
   pausa no máximo e um exemplo com `--max_samples 0`.
   - **Verificação:** os exemplos rodam como escritos.
 - [ ] 9. **Fechamento.** Build limpo com e sem `BUILD_TESTS`; `ctest` verde; regressão do xadrez
