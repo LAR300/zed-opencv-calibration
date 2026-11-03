@@ -6,8 +6,12 @@
 > **Valor:** alto / médio / baixo · **Esforço:** P / M / G · **MVP:** faz parte do primeiro corte?
 >
 > Contexto: [`vision.md`](vision.md) (perguntas em aberto ao final) e
-> [`referencias.md`](referencias.md). R1–R8 e M1–M4 são os requisitos do brief metodológico,
-> resumidos em [Requisitos de origem](#requisitos-de-origem).
+> [`referencias.md`](referencias.md). R1–R8 e M1–M4 são os requisitos do brief metodológico
+> ([`brief.md`](brief.md)), resumidos em [Requisitos de origem](#requisitos-de-origem).
+>
+> **Specs (2026-11-03):** todos os itens de E1–E5 têm `spec.md` e `plan.md` em `../specs/<slug>/`,
+> exceto as execuções (`execucao-*`), que seguem o spec `experimentos`. Os itens de E6 ficam para
+> depois.
 >
 > **Rascunho.** O backlog foi gerado junto com a visão, a pedido do usuário. Revisto em 2026-11-03
 > com os achados de [`../auditoria.md`](../auditoria.md) (§8); os riscos citados como "risco N"
@@ -27,7 +31,7 @@ Fase 2  implementação, um módulo por vez, com testes
         └─ (paralelo)      higiene-ferramentas
 Fase 3  execucao-a ─────────────── portão A: nossa calibração empata ou supera F na validação?
         execucao-b ─────────────── portão B: B equivale a A (R6)?
-        execucao-b-linha ───────── só se B falhar
+        execucao-b-linha ───────── só se B falhar: adota a referência de B
         execucao-robo ──────────── mesmo protocolo na câmera do robô (outro serial)
 Fase 4  (futuro) preparacao-agua → condições C1/C2
 ```
@@ -281,16 +285,18 @@ Por que esta ordem:
   - **Portão:** nossa calibração empata ou supera F na validação (M3, M4)?
   - **Saída:** os intrínsecos "secos" de referência.
 
-- [ ] **execucao-b** — Condição B: ar, com acrílico, tampa remontada entre capturas
+- [ ] **execucao-b** — Condição B: ar, com acrílico, tampa montada uma vez
   - Valor: alto · Esforço: G · MVP: sim
   - Depende de: execucao-a
   - **Portão:** B é equivalente a A pelos critérios do R6?
-  - Uma dispersão maior em B aponta problema de montagem.
+  - Ordem em blocos e tampa não remontada (usuário, 2026-11-03). A repetibilidade da remontagem é
+    uma premissa do encaixe da tampa, não é medida.
 
-- [ ] **execucao-b-linha** — Condição B′: recalibração no ar com acrílico
-  - Valor: médio · Esforço: G · MVP: não (condicional)
+- [ ] **execucao-b-linha** — Condição B′: adotar a calibração com acrílico
+  - Valor: médio · Esforço: P · MVP: não (condicional)
   - Depende de: execucao-b
-  - Só é executada se B falhar no portão.
+  - Só se B falhar no portão: a referência de B vira a calibração operacional com acrílico, sem
+    captura nova.
 
 - [ ] **higiene-ferramentas** — Autocalibração no visualizador e `--svo` na calibração
   - Valor: baixo · Esforço: P · MVP: não
