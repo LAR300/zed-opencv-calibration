@@ -59,6 +59,11 @@ bool loadDetectorParameters(const std::string& path,
                             cv::Ptr<cv::aruco::DetectorParameters>& params,
                             std::string& error, std::string& warning);
 
+// Every numeric field of the detector parameters, by OpenCV name, sorted by
+// name: recorded in detections.json so that a detection can be reproduced
+std::vector<std::pair<std::string, double>> detectorParameterList(
+    const cv::Ptr<cv::aruco::DetectorParameters>& params);
+
 // Detected tags: tag ID -> its 4 image corners, in the order of tagCorners3D()
 using TagDetections = std::map<int, std::vector<cv::Point2f>>;
 

@@ -53,7 +53,15 @@
     aceita; uma pasta com um arquivo é recusada e o arquivo continua lá; os nomes saem
     `left/free_0.png`.
   - **Pronto quando:** `ctest` verde; nenhum teste apaga arquivo.
-- [ ] 3. **Escrita de `detections.json`** (R6, R7). `DetectionsWriter` acumula quadros e grava com
+- [x] 3. **Escrita de `detections.json`** (R6, R7). Feito em
+  `common/capture_io/detections_io.{hpp,cpp}` (escrita e leitura), testes em
+  `tests/test_detections_io.cpp` (8 casos; 96/96 no total). O `json.load` do Python lê o arquivo,
+  com os cantos preservados até 1e-9 px. A lista de parâmetros do detector vem de
+  `detectorParameterList()`, extraída de `loadDetectorParameters` para que a leitura e o registro
+  usem os mesmos campos. A gravação passa por `<arquivo>.tmp` e um `rename`, então o arquivo em
+  disco está sempre completo, mesmo regravado a cada par.
+
+  Especificação original da etapa: `DetectionsWriter` acumula quadros e grava com
   `cv::FileStorage` em JSON, no formato de spec § Formatos.
   - Testes primeiro: um quadro com 2 tags à esquerda e 1 à direita é gravado e relido pelo próprio
     `FileStorage`, com os mesmos IDs, a ordem dos cantos e a precisão ≥ 9 dígitos.

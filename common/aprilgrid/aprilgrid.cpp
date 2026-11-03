@@ -1,5 +1,6 @@
 #include "aprilgrid.hpp"
 
+#include <algorithm>
 #include <fstream>
 #include <limits>
 #include <map>
@@ -140,6 +141,66 @@ cv::Ptr<cv::aruco::DetectorParameters> defaultDetectorParameters() {
   return params;
 }
 
+namespace {
+
+// The numeric fields of cv::aruco::DetectorParameters (OpenCV 4.5.4), by name.
+// Shared by the reader below and by detectorParameterList(), so that the file
+// read and the list recorded in detections.json have the same fields.
+struct DetectorFieldMaps {
+  std::map<std::string, int*> ints;
+  std::map<std::string, double*> doubles;
+  std::map<std::string, float*> floats;
+};
+
+DetectorFieldMaps detectorFieldMaps(cv::aruco::DetectorParameters& p) {
+  DetectorFieldMaps m;
+  m.ints = {{"adaptiveThreshWinSizeMin", &p.adaptiveThreshWinSizeMin},
+            {"adaptiveThreshWinSizeMax", &p.adaptiveThreshWinSizeMax},
+            {"adaptiveThreshWinSizeStep", &p.adaptiveThreshWinSizeStep},
+            {"minDistanceToBorder", &p.minDistanceToBorder},
+            {"cornerRefinementMethod", &p.cornerRefinementMethod},
+            {"cornerRefinementWinSize", &p.cornerRefinementWinSize},
+            {"cornerRefinementMaxIterations", &p.cornerRefinementMaxIterations},
+            {"markerBorderBits", &p.markerBorderBits},
+            {"perspectiveRemovePixelPerCell", &p.perspectiveRemovePixelPerCell},
+            {"aprilTagMinClusterPixels", &p.aprilTagMinClusterPixels},
+            {"aprilTagMaxNmaxima", &p.aprilTagMaxNmaxima},
+            {"aprilTagMinWhiteBlackDiff", &p.aprilTagMinWhiteBlackDiff},
+            {"aprilTagDeglitch", &p.aprilTagDeglitch}};
+  m.doubles = {{"adaptiveThreshConstant", &p.adaptiveThreshConstant},
+               {"minMarkerPerimeterRate", &p.minMarkerPerimeterRate},
+               {"maxMarkerPerimeterRate", &p.maxMarkerPerimeterRate},
+               {"polygonalApproxAccuracyRate", &p.polygonalApproxAccuracyRate},
+               {"minCornerDistanceRate", &p.minCornerDistanceRate},
+               {"minMarkerDistanceRate", &p.minMarkerDistanceRate},
+               {"cornerRefinementMinAccuracy", &p.cornerRefinementMinAccuracy},
+               {"perspectiveRemoveIgnoredMarginPerCell",
+                &p.perspectiveRemoveIgnoredMarginPerCell},
+               {"maxErroneousBitsInBorderRate", &p.maxErroneousBitsInBorderRate},
+               {"minOtsuStdDev", &p.minOtsuStdDev},
+               {"errorCorrectionRate", &p.errorCorrectionRate}};
+  m.floats = {{"aprilTagQuadDecimate", &p.aprilTagQuadDecimate},
+              {"aprilTagQuadSigma", &p.aprilTagQuadSigma},
+              {"aprilTagCriticalRad", &p.aprilTagCriticalRad},
+              {"aprilTagMaxLineFitMse", &p.aprilTagMaxLineFitMse}};
+  return m;
+}
+
+}  // namespace
+
+std::vector<std::pair<std::string, double>> detectorParameterList(
+    const cv::Ptr<cv::aruco::DetectorParameters>& params) {
+  cv::aruco::DetectorParameters copy = *params;
+  const DetectorFieldMaps fields = detectorFieldMaps(copy);
+  std::vector<std::pair<std::string, double>> list;
+  for (const auto& [name, ptr] : fields.ints) list.emplace_back(name, *ptr);
+  for (const auto& [name, ptr] : fields.doubles) list.emplace_back(name, *ptr);
+  for (const auto& [name, ptr] : fields.floats) list.emplace_back(name, *ptr);
+  list.emplace_back("detectInvertedMarker", copy.detectInvertedMarker ? 1.0 : 0.0);
+  std::sort(list.begin(), list.end());
+  return list;
+}
+
 bool loadDetectorParameters(const std::string& path,
                             cv::Ptr<cv::aruco::DetectorParameters>& params,
                             std::string& error, std::string& warning) {
@@ -163,38 +224,10 @@ bool loadDetectorParameters(const std::string& path,
   // OpenCV 4.5.4 has no DetectorParameters reader: the fields are read one by
   // one, with the same names as the OpenCV structure
   cv::aruco::DetectorParameters& p = *params;
-  const std::map<std::string, int*> int_fields = {
-      {"adaptiveThreshWinSizeMin", &p.adaptiveThreshWinSizeMin},
-      {"adaptiveThreshWinSizeMax", &p.adaptiveThreshWinSizeMax},
-      {"adaptiveThreshWinSizeStep", &p.adaptiveThreshWinSizeStep},
-      {"minDistanceToBorder", &p.minDistanceToBorder},
-      {"cornerRefinementMethod", &p.cornerRefinementMethod},
-      {"cornerRefinementWinSize", &p.cornerRefinementWinSize},
-      {"cornerRefinementMaxIterations", &p.cornerRefinementMaxIterations},
-      {"markerBorderBits", &p.markerBorderBits},
-      {"perspectiveRemovePixelPerCell", &p.perspectiveRemovePixelPerCell},
-      {"aprilTagMinClusterPixels", &p.aprilTagMinClusterPixels},
-      {"aprilTagMaxNmaxima", &p.aprilTagMaxNmaxima},
-      {"aprilTagMinWhiteBlackDiff", &p.aprilTagMinWhiteBlackDiff},
-      {"aprilTagDeglitch", &p.aprilTagDeglitch}};
-  const std::map<std::string, double*> double_fields = {
-      {"adaptiveThreshConstant", &p.adaptiveThreshConstant},
-      {"minMarkerPerimeterRate", &p.minMarkerPerimeterRate},
-      {"maxMarkerPerimeterRate", &p.maxMarkerPerimeterRate},
-      {"polygonalApproxAccuracyRate", &p.polygonalApproxAccuracyRate},
-      {"minCornerDistanceRate", &p.minCornerDistanceRate},
-      {"minMarkerDistanceRate", &p.minMarkerDistanceRate},
-      {"cornerRefinementMinAccuracy", &p.cornerRefinementMinAccuracy},
-      {"perspectiveRemoveIgnoredMarginPerCell",
-       &p.perspectiveRemoveIgnoredMarginPerCell},
-      {"maxErroneousBitsInBorderRate", &p.maxErroneousBitsInBorderRate},
-      {"minOtsuStdDev", &p.minOtsuStdDev},
-      {"errorCorrectionRate", &p.errorCorrectionRate}};
-  const std::map<std::string, float*> float_fields = {
-      {"aprilTagQuadDecimate", &p.aprilTagQuadDecimate},
-      {"aprilTagQuadSigma", &p.aprilTagQuadSigma},
-      {"aprilTagCriticalRad", &p.aprilTagCriticalRad},
-      {"aprilTagMaxLineFitMse", &p.aprilTagMaxLineFitMse}};
+  const DetectorFieldMaps fields = detectorFieldMaps(p);
+  const auto& int_fields = fields.ints;
+  const auto& double_fields = fields.doubles;
+  const auto& float_fields = fields.floats;
 
   std::ostringstream warnings;
   for (const auto& node : fs.root()) {
