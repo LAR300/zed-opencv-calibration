@@ -6,8 +6,10 @@
 
 #include "aprilgrid.hpp"
 #include "calibration_checker.hpp"
+#include "capture_dir.hpp"
 #include "opencv_calibration.hpp"
 #include "sample_limits.hpp"
+#include "session.hpp"
 #include "zed_camera_settings.hpp"
 
 static_assert(MIN_CALIBRATION_SAMPLES == MIN_IMAGE,
@@ -115,6 +117,7 @@ struct Args {
   bool sample_limits_given = false;  // --min_samples or --max_samples passed
   std::string sample_limits_error;   // set when one of them is not a number
   std::string camera_settings_file;  // capture settings to apply
+  std::string session_file;          // traceable capture mode (--session)
 
   void parse(int argc, char* argv[]) {
     app_name = argv[0];
@@ -146,6 +149,8 @@ struct Args {
         target_yaml = argv[++i];
       } else if (arg == "--camera_settings" && i + 1 < argc) {
         camera_settings_file = argv[++i];
+      } else if (arg == "--session" && i + 1 < argc) {
+        session_file = argv[++i];
       } else if (arg == "--detector_params" && i + 1 < argc) {
         detector_params_file = argv[++i];
       } else if (arg == "--min_tags" && i + 1 < argc) {
@@ -201,6 +206,10 @@ struct Args {
         std::cout << "  --camera_settings <file> YAML file with the capture "
                      "settings to apply (exposure, gain, white balance...), "
                      "restored on exit."
+                  << std::endl;
+        std::cout << "  --session <file>       Traceable capture: images, detections "
+                     "and metadata go to <output_root>/<condition>/captura_<XX>/ "
+                     "(see config/session_example.yaml). Requires --target_yaml."
                   << std::endl;
         std::cout << "  --svo <file>      Path to the SVO file." << std::endl;
         std::cout << "  --fisheye         Use fisheye lens model." << std::endl;
@@ -356,6 +365,40 @@ int main(int argc, char* argv[]) {
                    "the stored images were taken with the settings printed in "
                    "the log of their capture."
                 << std::endl;
+  }
+
+  // Session (traceable capture mode): read and its folder prepared before
+  // opening the camera (.ai/specs/persistencia-captura R1-R3)
+  const bool use_session = !args.session_file.empty();
+  Session session;
+  std::string capture_dir;
+  if (use_session) {
+    std::string error;
+    if (args.use_stored_images) {
+      std::cerr << "Error: --session records a new live capture; it cannot be "
+                   "combined with --use_stored_values."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (!use_aprilgrid) {
+      std::cerr << "Error: --session requires the AprilGrid target "
+                   "(--target_yaml)."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (!loadSession(args.session_file, session, error)) {
+      std::cerr << "Error: " << error << std::endl;
+      return EXIT_FAILURE;
+    }
+    capture_dir = captureDir(session);
+    if (!prepareCaptureDir(capture_dir, error)) {
+      std::cerr << "Error: " << error << std::endl;
+      return EXIT_FAILURE;
+    }
+    std::cout << " * Session: " << args.session_file << std::endl;
+    std::cout << "   - Condition: " << session.condition << ", capture "
+              << session.capture << ", lens " << session.lens << std::endl;
+    std::cout << "   - Output folder: " << capture_dir << std::endl;
   }
 
   // Initialize the calibration checker. Its maximum is unlimited: the

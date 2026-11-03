@@ -17,14 +17,18 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/aprilgrid)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/camera_settings)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../common/capture_io)
 
 link_directories(${ZED_LIBRARY_DIR})
 link_directories(${OpenCV_LIBRARY_DIRS})
 link_directories(${CUDA_LIBRARY_DIRS})
 
-FILE(GLOB_RECURSE SRC_FILES "src/*.cpp" "../common/aprilgrid/*.cpp" "../common/camera_settings/*.cpp")
+FILE(GLOB_RECURSE SRC_FILES "src/*.cpp" "../common/aprilgrid/*.cpp" "../common/camera_settings/*.cpp"
+     "../common/capture_io/*.cpp")
 FILE(GLOB_RECURSE HDR_FILES "include/*.hpp")
 ADD_EXECUTABLE(${PROJECT_NAME} ${HDR_FILES} ${SRC_FILES})
 
 TARGET_LINK_LIBRARIES(${PROJECT_NAME} ${ZED_LIBRARIES} ${CUDA_LIBRARIES} ${OpenCV_LIBRARIES})
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/BuildInfo.cmake)
+zedcal_add_build_info(${PROJECT_NAME})

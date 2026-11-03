@@ -43,7 +43,9 @@ Sem isso não dá para:
 ### Sessão (modo novo)
 - **R1.** Uma nova opção, `--session <arquivo.yaml>`, liga o modo de captura rastreável. Sem ela,
   `zed_stereo_calibration` se comporta exatamente como hoje: `zed-images/`, `zed_calibration_<sn>.yml`
-  no diretório corrente e as mesmas mensagens.
+  no diretório corrente e as mesmas mensagens. O modo sessão exige o alvo AprilGrid
+  (`--target_yaml`), o da metodologia, e não se combina com `--use_stored_values`, porque ele grava
+  uma captura nova.
 - **R2.** O arquivo de sessão contém:
   - a raiz de saída e a condição (ex.: `A_ar_sem_acrilico`);
   - o número da captura e a lente;

@@ -97,7 +97,15 @@
 
 ### Fase B — integração no `zed_stereo_calibration`
 
-- [ ] 6. **Flag `--session`** (R1–R3). Parse no `Args`. A sessão é carregada e a pasta preparada
+- [x] 6. **Flag `--session`** (R1–R3). No `stereo_calibration/src/main.cpp`, a sessão é lida e a
+  pasta é preparada antes de abrir a câmera. O módulo `capture_io` e o commit no build entraram no
+  CMake da ferramenta. Verificado com a ferramenta compilada:
+  - sessão sem `capture`, `--session` com `--use_stored_values`, `--session` sem `--target_yaml` e
+    pasta já usada saem com código 1, sem abrir a câmera; a pasta usada fica intacta;
+  - o `--help` documenta a flag;
+  - a regressão do xadrez é idêntica ao `baseline.yml`, com o log sem diferença.
+
+  Especificação original da etapa: Parse no `Args`. A sessão é carregada e a pasta preparada
   **antes de abrir a câmera**. Se a flag não for passada, o caminho antigo não muda.
   - **Pronto quando:**
     - a regressão do xadrez é idêntica ao `baseline.yml` (`diff` e `cmp`);
