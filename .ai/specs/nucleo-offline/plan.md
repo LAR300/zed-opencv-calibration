@@ -44,7 +44,16 @@
   - Testes primeiro: com um arquivo pequeno de fixture, as tags só de uma câmera aparecem no mono e
     não nas comuns; `schema_version: 2` é recusado.
   - **Pronto quando:** `pytest` verde.
-- [ ] 4. **YAML do SDK** (R2). Leitura com D de 5, 8 ou 14 colunas ou `_FE`; escrita igual à do
+- [x] 4. **YAML do SDK** (R2). `zedcal/calib_file.py`: `read_calibration` (D com 5, 8 ou 14 colunas,
+  ou `_FE`; recusa termos não nulos além do 8º) e `write_calibration` (as chaves do C++; recusa
+  sobrescrever). Testes em `tests/test_calib_file.py` (23/23 no total).
+  - **Achado:** o `cv2` do Python grava uma tupla como matriz 2×1, e o SDK recusa esse `Size`
+    ("INVALID CALIBRATION FILE"). A escrita usa uma sequência (`Size: [ 1280, 720 ]`), como o C++,
+    e um teste confere isso.
+  - **Bancada:** o `zed_stereo_checker --calib_opencv` carregou um YAML gravado pelo pacote
+    (`bench_checker_load.sh`).
+
+  Especificação original da etapa: Leitura com D de 5, 8 ou 14 colunas ou `_FE`; escrita igual à do
   C++.
   - Testes primeiro: ida e volta sem perda; D 1×14 com zeros vira 8 coeficientes.
   - **Pronto quando:** `pytest` verde, e o checker carrega um YAML gravado pelo pacote (manual, na
