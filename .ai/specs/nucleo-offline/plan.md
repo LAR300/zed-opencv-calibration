@@ -117,12 +117,36 @@
     com ruído, o RMS por canto fica ≈ σ·√2.
   - **Pronto quando:** `pytest` verde, e o modo de compatibilidade com as detecções reais de
     `2026-11-03_camera_settings` reproduz o YAML do C++ até 1e-6 relativo.
-- [ ] 8. **Bootstrap** (R10). Reamostragem das vistas com semente fixa.
+- [x] 8. **Bootstrap** (R10), **com o critério estatístico não atendido** (registrado).
+  `zedcal/bootstrap.py`: reamostra as vistas com reposição, com semente fixa, e recalibra cada
+  amostra. Devolve as amostras dos parâmetros e o desvio-padrão. A mesma semente dá o mesmo
+  resultado (teste rápido).
+  - **Medido (2026-11-03,** dados sintéticos com 25 vistas e σ = 0,3 px): dispersão real de fx entre
+    30 capturas independentes de 0,27 px; estimativas por bootstrap de 5 capturas: 0,46, 0,21,
+    0,43, 0,57 e 0,31 px.
+    - O bootstrap **superestima em ~1,6×** (mediana).
+    - A estimativa de uma única captura **varia ~2×** de captura para captura.
+  - **Causa provável:** cada amostra deixa de fora ~37 % das vistas, entre elas as inclinadas que
+    fixam a focal. Hagemann também relata superestimação com poucas imagens.
+  - **Consequência:** a incerteza dos experimentos vem da dispersão entre as 10 capturas (EME
+    empírico); o bootstrap de uma captura serve como indicação conservadora.
+  - O teste estatístico (`ZEDCAL_SLOW=1`, ~15 min) passou a só conferir a ordem de grandeza
+    (razão entre 0,7 e 2,5).
+
+  Especificação original da etapa: Reamostragem das vistas com semente fixa.
   - Testes primeiro: a mesma semente dá o mesmo resultado; em dados sintéticos, o desvio-padrão de
     fx por bootstrap fica a menos de 30 % do desvio observado em 50 conjuntos sintéticos
     independentes.
   - **Pronto quando:** `pytest` verde.
-- [ ] 9. **Configuração e reprodutibilidade** (R12). A config YAML é copiada na saída; o relatório
+- [x] 9. **Configuração e reprodutibilidade** (R12).
+  - `zedcal/config.py` cria a pasta de saída sem sobrescrever e copia a config para dentro dela.
+  - `python3 -m zedcal.calibrate --config ...` (`zedcal/calibrate.py`) roda uma ou mais variantes,
+    com prior opcional e bootstrap opcional. Exemplo em `configs/calibrate_example.yaml`.
+  - Testes em `tests/test_command_calibrate.py`: duas execuções da mesma config dão o mesmo YAML e
+    o mesmo relatório (exceto o caminho da config). O relatório traz o commit e as versões. Uma
+    pasta já usada é recusada.
+
+  Especificação original da etapa: A config YAML é copiada na saída; o relatório
   traz o commit, as versões e a semente.
   - **Pronto quando:** rodar duas vezes a mesma config dá arquivos idênticos, exceto a data.
 
