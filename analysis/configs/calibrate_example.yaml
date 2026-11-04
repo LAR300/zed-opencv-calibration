@@ -1,0 +1,9 @@
+# python3 -m zedcal.calibrate --config configs/calibrate_example.yaml
+detections: /workspaces/isaac_ros-dev/dev/calib_runs/testes_persistencia/recalib_cs/captura_01/detections.json
+output_dir: /workspaces/isaac_ros-dev/dev/calib_runs/testes_persistencia/offline_example
+model: rational8
+variants:
+  - {mono_points: common, stereo: joint, rejection: cpp}   # reproduces the C++ calibration
+  - {mono_points: all, stereo: joint, rejection: cpp}      # every tag of each camera
+  - {mono_points: all, stereo: fixed, rejection: none}
+bootstrap: {n: 0, seed: 0}
