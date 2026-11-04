@@ -39,3 +39,6 @@ build
 .vscode/
 *.code-workspace
 .history/
+### Python ###
+__pycache__/
+.pytest_cache/
