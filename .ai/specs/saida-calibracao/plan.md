@@ -14,7 +14,10 @@
 
 ### Fase A — funções puras (TDD)
 
-- [ ] 1. **Agregação e convenção** (R3, R4). `aggregateRms(per_view_rms, corners_per_view)` dá o
+- [x] 1. **Agregação e convenção** (R3, R4). Em `common/calib_io/rms.hpp`: `aggregateRms`,
+  `msePerCoordinate` e `rmsPerCorner`. Testes em `tests/test_rms.cpp` (133/133).
+
+  Especificação original da etapa: `aggregateRms(per_view_rms, corners_per_view)` dá o
   RMS ponderado; `msePerCoordinate(rms)` dá RMS²/2.
   - Testes primeiro: duas vistas com o mesmo número de cantos dão a média quadrática; vistas com
     pesos diferentes dão o valor feito à mão; `msePerCoordinate(0,5) = 0,125`.
@@ -31,6 +34,15 @@
   - **Pronto quando:** `ctest` verde.
 
 ### Fase B — calibração
+
+- [ ] 3a. **`--recalibrate <captura>`** (R9). Ele lê o `session.yaml`, o `meta.json` e o
+  `detections.json` da captura e chama `calibrate()` com os pares dela. A F exportada, quando o
+  prior é `factory`, vem de `readOpenCVCalibration()` (teste de ida e volta com
+  `writeOpenCVCalibration`).
+  - **Pronto quando:** numa captura montada com as imagens de `2026-11-03_camera_settings` (cópias
+    em `left/free_<n>.png` e `right/`, com `detections.json` gerado pelo `--detections_out`), o
+    `--recalibrate` com prior `none` dá o mesmo YAML que o `--use_stored_values` dessas imagens,
+    até 1e-6 relativo; e uma segunda execução é recusada.
 
 - [ ] 4. **Prior configurável** (R1). No modo sessão, `calibrate()` recebe `use_intrinsic_prior`
   da sessão, com padrão `none`. Fora do modo sessão, nada muda.

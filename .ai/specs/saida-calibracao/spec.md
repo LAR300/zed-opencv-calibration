@@ -73,6 +73,17 @@ Três defeitos do relatório e da inicialização atuais afetam a metodologia:
     de parada, o tamanho da imagem, o número de pares e o commit.
 - **R8. Compatibilidade.** Sem `--session`, a saída, o arquivo, as mensagens e os números são os de
   hoje: regressão do xadrez idêntica ao `baseline.yml`.
+- **R9. Recalcular uma captura de sessão sem a câmera** (acrescentado em 2026-11-03, para verificar
+  este spec fora do laboratório). `zed_stereo_calibration --recalibrate <captura_XX>` refaz a
+  calibração com:
+  - os pares listados no `detections.json` da captura;
+  - a seção `calibration` do `session.yaml` dela;
+  - o alvo do `--target_yaml`.
+
+  Ele grava os arquivos de R7 na mesma pasta e recusa sobrescrever.
+  - Com `prior: factory` e sem câmera, o chute inicial vem da F exportada:
+    `<output_root>/fabrica/SN<serial>/calib_factory_<modelo>.yml`, com o serial do `meta.json`.
+    O `exportar-fabrica` provou que ela é igual ao que o SDK entrega.
 
 ## Condições de implementação
 
