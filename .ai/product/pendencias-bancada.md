@@ -22,3 +22,11 @@
 - [ ] **Checker ao vivo com F:** o `zed_stereo_checker` com a calibração interna e com
       `--calib_opencv calib_factory_rational8.yml`, alvo parado, ~30 quadros cada. A comparação nos
       pares gravados deu 0,0 px de diferença (plan, etapa 4).
+
+## saida-calibracao
+
+- [ ] **Calibração de uma captura de sessão ao vivo,** com 20 pares ou mais: o relatório e o
+      `calib_cpp_rational8.yml` saem na pasta da captura, com `prior: none` e com `prior: factory`
+      (este com o chute inicial do SDK, e não da F exportada). Ao vivo, isso cobre também o item
+      "calibração gravada na pasta da captura" da `persistencia-captura`. Sem a câmera, isso foi
+      verificado com `--recalibrate`.

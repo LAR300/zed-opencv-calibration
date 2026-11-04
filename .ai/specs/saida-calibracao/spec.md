@@ -106,17 +106,25 @@ Três defeitos do relatório e da inicialização atuais afetam a metodologia:
 
 ## Critérios de aceitação
 
-- [ ] Sem `--session`, a regressão do xadrez é idêntica ao `baseline.yml` e ao `baseline.log`.
-- [ ] Com `--session` e o prior padrão, o relatório registra `prior: none`. A calibração das
-      imagens de `2026-11-03_camera_settings` copiadas para uma sessão reproduz o recálculo
-      `--use_stored_values` dessas imagens até 1e-6 relativo.
-- [ ] Com `calibration.prior: factory`, o relatório registra o prior e o resultado coincide com a
-      calibração ao vivo de hoje para as mesmas imagens.
-- [ ] O RMS por câmera no ajuste estéreo, recalculado de forma independente em Python a partir do
-      YAML e das detecções, coincide com o relatório até 1e-4 px.
-- [ ] O relatório lista os quadros removidos e a etapa de cada remoção; `json.load` o lê.
-- [ ] O YAML `calib_cpp_rational8.yml` é carregado pelo `zed_stereo_checker --calib_opencv`.
-- [ ] Os testes das funções puras passam.
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-03. Sem o alvo, as
+> verificações usaram capturas de sessão montadas a partir das imagens de
+> `2026-11-03_camera_settings` e o `--recalibrate` (R9).
+
+- [x] Sem `--session`, a regressão do xadrez é idêntica ao `baseline.yml` e ao `baseline.log`.
+- [x] Com o prior padrão, o relatório registra `prior: none`. A calibração das imagens de
+      `2026-11-03_camera_settings`, copiadas para uma sessão, reproduz o recálculo
+      `--use_stored_values` delas: diferença 0.
+- [x] Com `calibration.prior: factory`, o relatório registra o prior, e o resultado coincide com a
+      calibração ao vivo gravada naquele dia para as mesmas imagens: diferença 0.
+- [x] O RMS por câmera no ajuste estéreo, recalculado de forma independente em Python a partir do
+      YAML e das detecções, coincide com o relatório até 1e-4 px. Medido: ≤ 8,8e-7 px.
+- [x] O relatório lista os quadros removidos e a etapa de cada remoção (par trocado de propósito,
+      removido na etapa estéreo); `json.load` o lê.
+- [x] O YAML `calib_cpp_rational8.yml` é carregado pelo `zed_stereo_checker --calib_opencv`.
+- [x] Os testes das funções puras passam (146/146).
+
+Pendência de bancada: calibrar uma captura **ao vivo** de sessão, com 20 pares ou mais (ver
+[`pendencias-bancada.md`](../../product/pendencias-bancada.md)).
 
 ## Perguntas em aberto
 

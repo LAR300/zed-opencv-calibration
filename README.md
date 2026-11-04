@@ -335,7 +335,8 @@ refractive model under water), a session file makes every capture self-contained
   | `detections.json` | per camera, **every** detected tag, with the corners before and after the refinement |
   | `meta.json` | camera, SDK, code commit, host, the session, the capture settings at start and end, and per pair the image timestamp, the host uptime and the sensor temperatures |
   | `session.yaml`, `capture.log` | the session file used and the whole terminal output |
-  | `zed_calibration_<serial>.yml` | the calibration, as without `--session` |
+  | `calib_cpp_<model>.yml` | the calibration, in the file the ZED SDK reads, written only if accepted |
+  | `calib_cpp_<model>.report.json` | how it was computed and how well the saved parameters fit (see below) |
 
 - **Nothing is ever deleted or overwritten.** The tool refuses to start if the capture folder already
   exists and is not empty: use the next capture number. `zed-images/` is not used.
@@ -344,6 +345,28 @@ refractive model under water), a session file makes every capture self-contained
 - `detections.json` and `meta.json` are plain JSON (`schema_version: 1`), read by the offline analysis.
   The temperatures are `null` when the camera sensors cannot be reached (see the permissions in
   `.ai/docs/bench.md`).
+- **Calibration of a session capture.** The optional `calibration` section of the session file sets
+  the model (`rational8` or `fisheye4`), the acceptance RMS, the outlier rejection factor and floor,
+  and the prior. The calibration starts **from scratch** unless `prior: factory` is set, so that it
+  can be compared with the factory calibration as an independent one. The steps are the same as
+  without `--session` (mono, per-view rejection, stereo with the intrinsics refined jointly,
+  per-view rejection).
+- **The report tells which RMS is which.** All values are OpenCV's per-corner 2D RMS
+  (`rms_convention: per_corner_2d`), with the per-coordinate MSE (RMS²/2) next to them:
+
+  | Field | Meaning |
+  |---|---|
+  | `stereo` | the RMS of the final stereo optimisation |
+  | `stereo_fit_left/right` | each camera with the **saved** parameters and the poses of the stereo fit; used for the acceptance |
+  | `free_pose_left/right` | each camera with the saved intrinsics and one free pose per view |
+  | `mono_stage_left/right` | the mono calibration before the stereo fit: what the tool prints as Left/Right without `--session` |
+
+  It also lists, per view, the corners used, the stereo fit error and whether the view was removed
+  (and at which stage), plus the standard deviations of the last mono calibration. OpenCV gives none
+  for the stereo fit.
+- `--recalibrate <captura_XX>` calibrates an existing session capture again without the camera, with
+  the `calibration` section of its `session.yaml` (with `prior: factory`, the exported factory
+  calibration of `zed_export_factory` is the prior). Existing results are never overwritten.
 - Older captures can be brought to the same format without the camera:
   `--use_stored_values --detections_out detections.json` writes the detections of `zed-images/`
   (checkerboard or AprilGrid) with the detector the calibration uses; an existing file is never

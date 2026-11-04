@@ -68,3 +68,10 @@ rodadas, em `ros2_ws/dev/calib_runs/<data>_<o_que>/`, fora deste repositório.
 - **Erros do checker sem janela:** `calib_runs/tools/checker_errors <target.yaml> <quadros>
   [calib.yml|internal] [pasta_zed-images/]` calcula os mesmos erros do `zed_stereo_checker`
   (esquerda, direita, estéreo), ao vivo ou nos pares gravados, e imprime a mediana e o IQR.
+- **Recalcular uma captura de sessão sem a câmera:** `zed_stereo_calibration --target_yaml
+  <target.yaml> --recalibrate <captura_XX>`. Para testar com uma rodada antiga,
+  `calib_runs/tools/make_session_capture.py` monta uma captura de sessão a partir do `zed-images/` e
+  do `detections.json` exportado, copiando as imagens sem tocar na original.
+  `calib_runs/tools/check_report_rms.py <captura>` recalcula em Python os RMS do relatório.
+- **O checker abre com um arquivo de calibração?** `calib_runs/tools/bench_checker_load.sh <calib.yml>`
+  roda o `zed_stereo_checker --calib_opencv` num `Xvfb :98` por alguns segundos. Não precisa do alvo.

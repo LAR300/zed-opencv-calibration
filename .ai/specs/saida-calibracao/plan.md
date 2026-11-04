@@ -136,7 +136,11 @@
 
 ### Fase C — documentação
 
-- [ ] 8. README (seção `calibration` da sessão, relatório e convenção do RMS) e
+- [x] 8. **Documentação.** README (seção `calibration`, a tabela dos RMS do relatório,
+  `--recalibrate`), `config/session_example.yaml` (seção `calibration`, desde a etapa 2) e
+  `.ai/docs/bench.md` (os auxiliares de verificação).
+
+  Especificação original da etapa: README (seção `calibration` da sessão, relatório e convenção do RMS) e
   `config/session_example.yaml`.
   - **Pronto quando:** o README explica a diferença entre o RMS da etapa mono, o do ajuste estéreo e
     o de pose livre.

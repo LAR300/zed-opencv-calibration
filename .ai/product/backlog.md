@@ -109,7 +109,7 @@ Por que esta ordem:
     métricas como mais uma calibração.
   - **Teste:** o checker com F exportado deve reproduzir o checker com a calibração interna.
 
-- [ ] **saida-calibracao** — Calibração do zero e relatório fiel na ferramenta C++
+- [x] **saida-calibracao** — Calibração do zero e relatório fiel na ferramenta C++
   - Valor: alto · Esforço: P · MVP: sim
   - Depende de: auditoria
   - **Calibração do zero por padrão no modo novo.** Hoje a captura ao vivo usa a fábrica como
