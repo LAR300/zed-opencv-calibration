@@ -45,11 +45,17 @@ uma vez por câmera     uma vez por condição          cada captura (x10)      
 
 ### 1. Acesso ao SDK e ao HID
 
-Sem o HID não há temperatura do sensor no `meta.json`, nem IMU.
+Sem o HID não há temperatura do sensor no `meta.json`, nem IMU. A verificação completa roda **no
+host**, fora do container: ela inspeciona os dispositivos USB e usa `docker exec`. Dentro do
+container ela falha com `container isaac-ros-dev is not running`.
 
 ```bash
-/workspaces/isaac_ros-dev/dev/zed-opencv-calibration/scripts/bench/check_zed_access.sh --check
+# no host, na raiz do repositório zed-opencv-calibration
+scripts/bench/check_zed_access.sh --check
 ```
+
+Dentro do container, só a leitura das temperaturas pelo SDK:
+`$BIN/access_check/zed_access_check` (0: ok; 2: a câmera não abre; 3: sem acesso ao HID).
 
 Se falhar, siga a seção *Permissões* de [`bench.md`](bench.md). A regra udev é instalada uma vez,
 no host, com `sudo` (`scripts/bench/install_zed_udev.sh`).
