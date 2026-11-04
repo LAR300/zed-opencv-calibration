@@ -86,7 +86,9 @@ medido**: a medição é feita uma vez, com três partidas a frio em dias difere
 fixos:
 
 ```bash
-./zed_stereo_calibration --target_yaml target.yaml --session sessao_termico.yaml --timelapse 30 60
+./zed_stereo_calibration --target_yaml target.yaml \
+    --camera_settings ../../config/camera_settings_zed2i.yaml \
+    --session sessao_termico.yaml --timelapse 30 60
 python3 -m zedcal.thermal_command --config termico.yaml      # propõe X
 ```
 
