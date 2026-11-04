@@ -167,7 +167,10 @@ def dispersion(a: Sequence[float], b: Sequence[float]) -> Dict:
     a, b = np.asarray(a, float), np.asarray(b, float)
     bf = st.levene(a, b, center="median")
     f = float(np.var(b, ddof=1) / np.var(a, ddof=1))
+    dfb, dfa = len(b) - 1, len(a) - 1
+    ci = [float(np.sqrt(f / st.f.ppf(0.975, dfb, dfa))), float(np.sqrt(f / st.f.ppf(0.025, dfb, dfa)))]
     return {"sd_a": float(np.std(a, ddof=1)), "sd_b": float(np.std(b, ddof=1)),
+            "sd_ratio": float(np.sqrt(f)), "sd_ratio_ci95": ci,
             "brown_forsythe": {"statistic": float(bf.statistic), "p_value": float(bf.pvalue)},
             "f_ratio": {"statistic": f, "p_value": float(st.f.sf(f, len(b) - 1, len(a) - 1))}}
 

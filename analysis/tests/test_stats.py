@@ -110,6 +110,14 @@ def test_doubled_sd_is_detected():
     assert r["brown_forsythe"]["p_value"] < 0.05 and r["f_ratio"]["p_value"] < 0.01
 
 
+def test_sd_ratio_interval():
+    a, b = _normal_sample(10), 2.0 * _normal_sample(10)
+    r = stats.dispersion(a, b)
+    assert r["sd_ratio"] == pytest.approx(2.0)
+    # F(0.975; 9, 9) = 4.026 -> sqrt(4 / 4.026) .. sqrt(4 * 4.026)
+    assert r["sd_ratio_ci95"] == pytest.approx([np.sqrt(4 / 4.0260), np.sqrt(4 * 4.0260)], rel=1e-3)
+
+
 def test_holm_known_case():
     assert stats.holm([0.01, 0.04, 0.03, 0.005]) == pytest.approx([0.03, 0.06, 0.06, 0.02])
 

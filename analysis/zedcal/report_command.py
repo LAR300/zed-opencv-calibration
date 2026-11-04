@@ -212,10 +212,14 @@ def _markdown(cfg, conds, comp, factory_q, version) -> str:
                                                                  _fmt(t["ci90"][1]), _fmt(t["margin"]), t["p_value"], _fmt(t["equivalent"])))
         L.append("")
     L += ["### Dispersão (R6): B mais disperso que A?", "",
-          "| Grandeza | DP A | DP B | Brown–Forsythe p | F | p (unilateral) |", "|---|---:|---:|---:|---:|---:|"]
+          "| Grandeza | DP A | DP B | DP B / DP A | IC95 % | Brown–Forsythe p | F | p (unilateral) |",
+          "|---|---:|---:|---:|---|---:|---:|---:|"]
     for k, d in comp["dispersion"].items():
-        L.append("| %s | %s | %s | %.2g | %.3g | %.2g |" % (k, _fmt(d["sd_a"]), _fmt(d["sd_b"]), d["brown_forsythe"]["p_value"],
-                                                          d["f_ratio"]["statistic"], d["f_ratio"]["p_value"]))
+        L.append("| %s | %s | %s | %.2f | [%.2f, %.2f] | %.2g | %.3g | %.2g |" % (
+            k, _fmt(d["sd_a"]), _fmt(d["sd_b"]), d["sd_ratio"], d["sd_ratio_ci95"][0], d["sd_ratio_ci95"][1],
+            d["brown_forsythe"]["p_value"], d["f_ratio"]["statistic"], d["f_ratio"]["p_value"]))
+    L += ["", "Com n = 10, um p alto não mostra dispersões iguais: o IC da razão dos DPs diz quanto "
+          "a mais de dispersão em B os dados ainda permitem."]
     if "cross_application" in comp:
         L += ["", "### Aplicação cruzada (R4): na outra condição menos na própria", "",
               "| Métrica do M3 | Calibrações de | Diferença média | IC95 % | n |", "|---|---|---:|---|---:|"]
