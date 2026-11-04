@@ -72,7 +72,18 @@
   - Testes primeiro: com dados sintéticos sem ruído, os resíduos são < 1e-9 px. Para uma tag
     isolada, a solução escolhida é a de menor resíduo entre as duas do IPPE.
   - **Pronto quando:** `pytest` verde.
-- [ ] 6. **Gerador sintético** (R11). Câmera, poses, ruído e vieses (flecha do alvo, escala); a
+- [x] 6. **Gerador sintético** (R11). `zedcal/synthetic.py`:
+  - `zed_like_rig` (f ≈ 534 px, baseline 120 mm, 1280 × 720);
+  - `random_poses` (inclinação, posição e distância sorteadas);
+  - `generate` (ruído gaussiano por coordenada, alvo empenado com flecha no centro, escala do alvo
+    errada). O arquivo declara sempre o alvo nominal, como uma captura real;
+  - `write`.
+
+  Testes em `tests/test_synthetic.py` (32/32 no total): o arquivo passa no leitor; com σ = 0,1 px,
+  o desvio medido sobre > 4 000 coordenadas fica em 0,1 ± 0,005; sem ruído, o resíduo é < 1e-9; a
+  flecha e a escala mudam a imagem.
+
+  Especificação original da etapa: Câmera, poses, ruído e vieses (flecha do alvo, escala); a
   saída é um `detections.json`.
   - Testes primeiro: o arquivo gerado passa no leitor da etapa 3; com σ = 0,1 px, o desvio dos
     resíduos medido sobre 10⁴ cantos fica em 0,1 ± 0,005 px.
