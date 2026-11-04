@@ -81,8 +81,12 @@
 - [ ] 6. **Captura completa de bancada.** As 63 poses.
   - **Pronto quando:** todas foram salvas ou justificadas (`o` ou `k`); o tempo total foi
     registrado; as tolerâncias foram revistas com o operador, e o v1 foi atualizado se preciso.
-- [ ] 7. **Documentação.** README (roteiro, ids, definição dos ângulos, teclas) e um guia de bancada
-  com fotos ou esquemas de cada bloco.
+- [ ] 7. **Documentação.** A parte do README está feita (2026-11-04: "Pose Script", com ids,
+  ângulos, teclas e registros). **Falta** o guia de bancada com fotos ou esquemas de cada bloco,
+  que depende da captura completa (etapa 6).
+
+  Especificação original da etapa: README (roteiro, ids, definição dos ângulos, teclas) e um
+  guia de bancada com fotos ou esquemas de cada bloco.
   - **Pronto quando:** o guia permite fazer o roteiro sem consultar o código.
 
 ## Riscos
