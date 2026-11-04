@@ -21,7 +21,11 @@
   `analysis/configs/`, com `README.md` curto. Um teste verifica que nenhum módulo importa
   `cv2.aruco` nem usa `findChessboardCorners` (inspeção do código-fonte).
   - **Pronto quando:** `pytest` roda e esse teste passa.
-- [ ] 2. **Alvo e pontos 3D** (R3). `target.object_points(target, tag_id)` e a versão para o
+- [x] 2. **Alvo e pontos 3D** (R3). `zedcal/target.py`: `Target.tag_corners` (BR, BL, TL, TR, como o
+  C++), `checkerboard_points` (a ordem do `calibrate()`) e `with_measured` (dimensões medidas).
+  Testes em `tests/test_target.py`, com os valores de `tests/test_geometry.cpp`.
+
+  Especificação original da etapa: `target.object_points(target, tag_id)` e a versão para o
   xadrez.
   - Testes primeiro: os valores esperados de `tests/test_geometry.cpp` para as tags 0, 5, 30 e 35; o xadrez 9×6 de
     23,8 mm.
