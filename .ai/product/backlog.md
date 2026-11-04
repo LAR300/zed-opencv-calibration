@@ -183,7 +183,9 @@ Por que esta ordem:
     em 2026-11-03.
     - O AprilGrid tem BR ≈ 0,7 contra 0,3 no xadrez, com fy/fx +0,2–0,3 % e erro concentrado nas
       bordas.
-    - Já descartados offline: o empeno do alvo, a anisotropia do refino e a seleção de tags.
+    - Já descartados offline: o empeno do alvo, a anisotropia do refino, a seleção de tags e,
+      em 2026-11-04, o movimento durante a leitura do sensor (existe, inclusive no xadrez, mas
+      explica ~1–2 % do resíduo; `resultado.md` do piloto).
   - **Na bancada:** medir a planicidade do alvo; fazer uma captura com o roteiro v1 (inclinações nos
     dois eixos e alvo girado); fazer uma captura de xadrez com as mesmas poses; comparar BR e fy/fx.
 

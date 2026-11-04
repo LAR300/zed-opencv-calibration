@@ -74,6 +74,7 @@ F avaliada nas mesmas imagens tem BR maior ainda: 0,34 no xadrez e 0,75–0,79 n
 |---|---|---|
 | Alvo empenado | Dados sintéticos com flecha de 0, 1, 2 e 4 mm | Seriam precisos ~4 mm para BR ≈ 0,6, e o efeito vai para o fx (−0,86 %), não para o fy/fx (−0,02 %). **Não explica.** |
 | Refino dos cantos anisotrópico | Deslocamento do refino (refinado − não refinado) por tipo de canto e por faixa da imagem | ~1,4 px para fora, em diagonal, com variações iguais na vertical e na horizontal. O gradiente vertical das médias por faixa era efeito de seleção dos cantos. **Não explica.** |
+| Movimento durante a leitura (rolling shutter) | Por vista, pose livre com os intrínsecos fixos e a parte do resíduo linear na linha da imagem, d = v·(y − ȳ), que nenhuma pose rígida absorve (`analysis/piloto/rolling_shutter.py`, 2026-11-04) | Existe em todas as capturas, inclusive no xadrez: a inclinação por vista muda de sinal entre vistas e é a mesma nas duas câmeras (correlação E–D 0,56–0,92). Mas explica só ~1–2 % do MSE do resíduo por vista (p90 5–11 %), com amplitude parecida no xadrez e no AprilGrid. **Não explica** o BR de 0,7; reforça a captura estática. |
 | Seleção das tags (só as comuns) | Variantes `all` × `common` | Mesmo fy/fx e mesmo BR (pergunta 4). **Não explica.** |
 
 **Ficam em aberto:**
