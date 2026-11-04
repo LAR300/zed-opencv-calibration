@@ -66,6 +66,13 @@
     devolve as mesmas duas soluções do caso planar. A de menor resíduo é refinada com
     `solvePnPRefineLM`, que é o que a armadilha 5 de Hagemann pede.
   - No fisheye, o PnP roda nos pontos normalizados.
+  - **Correção (2026-11-03, spec `cobertura`):** com o alvo inclinado 35° na borda da imagem, o
+    `pose` errava (196 px de resíduo). A desdistorção interna do `solvePnPGeneric` é grosseira na
+    borda da lente grande-angular. Agora o `pose` testa três candidatos — IPPE nos pontos
+    desdistorcidos com `undistortPointsIter` (critério apertado), o IPPE como o OpenCV faz e o PnP
+    iterativo —, refina cada um com LM nos pontos distorcidos e fica com o de menor resíduo.
+    Teste de regressão em `test_residuals.py`. Os resultados reais do M1 e do M3 do piloto não
+    mudaram.
 
   Especificação original da etapa: Resíduos com sinal, por canto; pose livre (IPPE ou
   IPPE_SQUARE + LM) e pose estéreo.

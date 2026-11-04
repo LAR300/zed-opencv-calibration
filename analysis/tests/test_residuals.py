@@ -55,3 +55,19 @@ def test_right_pose_matches_the_composition():
 
 def test_rms_convention():
     assert abs(rms_per_corner(np.array([[3.0, 4.0], [0.0, 0.0]])) - np.sqrt(12.5)) < 1e-12
+
+
+def test_strongly_tilted_board_at_the_border_of_a_wide_angle_lens():
+    # Regression: the default undistortion inside solvePnPGeneric gave a wrong pose here
+    import cv2
+    from zedcal import synthetic
+    rig = synthetic.zed_like_rig()
+    cam = Camera(rig.K_left, rig.D_left)
+    b = np.radians(35)
+    R = np.array([[np.cos(b), 0, np.sin(b)], [0, 1, 0], [-np.sin(b), 0, np.cos(b)]]) @ np.diag([1.0, -1.0, -1.0])
+    t = np.array([0.0, 0.0, 900.0]) - R @ synthetic.board_center(synthetic.KALIBR_6X6)
+    rv, _ = cv2.Rodrigues(R)
+    obj = board()
+    img = project(obj, rv.ravel(), t, cam)
+    rv2, tv2 = pose(obj, img, cam)
+    assert rms_per_corner(residuals(obj, img, rv2, tv2, cam)) < 1e-6
