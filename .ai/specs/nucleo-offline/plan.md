@@ -30,7 +30,16 @@
   - Testes primeiro: os valores esperados de `tests/test_geometry.cpp` para as tags 0, 5, 30 e 35; o xadrez 9×6 de
     23,8 mm.
   - **Pronto quando:** `pytest` verde.
-- [ ] 3. **Leitura de `detections.json` e `meta.json`** (R1). Validação da versão, quadros por
+- [x] 3. **Leitura de `detections.json` e `meta.json`** (R1). `zedcal/io.py`:
+  - `load_detections`, que recusa outra `schema_version`;
+  - `mono_correspondences`, com todas as tags da câmera;
+  - `common_correspondences`, com as tags comuns em ordem de id, como o `matchCommonTags` do C++;
+  - `load_meta`, que transforma o `timestamp_ns` (texto) em `int` exato.
+
+  AprilGrid e xadrez. Testes em `tests/test_io_detections.py` (15/15 no total). O `detections.json`
+  real da `v2` é lido: no par 0, 17 tags comuns e 21 na esquerda.
+
+  Especificação original da etapa: Validação da versão, quadros por
   câmera e correspondências mono e comuns.
   - Testes primeiro: com um arquivo pequeno de fixture, as tags só de uma câmera aparecem no mono e
     não nas comuns; `schema_version: 2` é recusado.
