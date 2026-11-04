@@ -20,6 +20,7 @@
 #include "sample_limits.hpp"
 #include "session.hpp"
 #include "session_calibration.hpp"
+#include "timelapse.hpp"
 #include "zed_camera_settings.hpp"
 #include "zed_open.hpp"
 
@@ -131,6 +132,9 @@ struct Args {
   std::string session_file;          // traceable capture mode (--session)
   std::string detections_out;        // detections.json of the stored images
   std::string recalibrate_dir;       // session capture to calibrate again
+  double timelapse_interval_s = 0.0;   // --timelapse: one pair every interval
+  double timelapse_duration_min = 0.0; // ... for this long (0: off)
+  std::string timelapse_error;         // set when its values are not numbers
   bool fisheye_given = false;        // --fisheye passed explicitly
 
   void parse(int argc, char* argv[]) {
@@ -170,6 +174,13 @@ struct Args {
         detections_out = argv[++i];
       } else if (arg == "--recalibrate" && i + 1 < argc) {
         recalibrate_dir = argv[++i];
+      } else if (arg == "--timelapse" && i + 2 < argc) {
+        try {
+          timelapse_interval_s = std::stod(argv[++i]);
+          timelapse_duration_min = std::stod(argv[++i]);
+        } catch (const std::exception&) {
+          timelapse_error = "--timelapse expects <interval_s> <duration_min>";
+        }
       } else if (arg == "--detector_params" && i + 1 < argc) {
         detector_params_file = argv[++i];
       } else if (arg == "--min_tags" && i + 1 < argc) {
@@ -238,6 +249,11 @@ struct Args {
                      "(captura_<XX>), without the camera, with the 'calibration' section "
                      "of its session.yaml. Requires --target_yaml. Existing results are "
                      "never overwritten."
+                  << std::endl;
+        std::cout << "  --timelapse <interval_s> <duration_min> With --session: save one "
+                     "pair every interval, without 's', with pose_id 'thermal', for the "
+                     "duration, then stop without calibrating (warm-up record, "
+                     ".ai/specs/aquecimento-termico). The target must stay still in view."
                   << std::endl;
         std::cout << "  --svo <file>      Path to the SVO file." << std::endl;
         std::cout << "  --fisheye         Use fisheye lens model." << std::endl;
@@ -511,6 +527,24 @@ int main(int argc, char* argv[]) {
     if (fs::exists(args.detections_out)) {
       std::cerr << "Error: '" << args.detections_out
                 << "' already exists and is never overwritten." << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+
+  // --timelapse: a warm-up record of a session (.ai/specs/aquecimento-termico R1)
+  const bool use_timelapse = args.timelapse_duration_min > 0.0 || args.timelapse_interval_s > 0.0 ||
+                             !args.timelapse_error.empty();
+  if (use_timelapse) {
+    if (!args.timelapse_error.empty() || args.timelapse_interval_s <= 0.0 ||
+        args.timelapse_duration_min <= 0.0 ||
+        args.timelapse_duration_min * 60.0 < args.timelapse_interval_s) {
+      std::cerr << "Error: --timelapse expects <interval_s> <duration_min>, both greater than 0 "
+                   "and the duration at least one interval."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (args.session_file.empty()) {
+      std::cerr << "Error: --timelapse records a session: it requires --session." << std::endl;
       return EXIT_FAILURE;
     }
   }
@@ -901,6 +935,19 @@ int main(int argc, char* argv[]) {
     cv::resizeWindow(window_name, display_size.width * 2,
                      display_size.height + text_area_height);
 
+    std::unique_ptr<TimelapseSchedule> timelapse;
+    auto steady_seconds = []() {
+      return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch())
+          .count();
+    };
+    if (use_timelapse) {
+      timelapse = std::make_unique<TimelapseSchedule>(
+          args.timelapse_interval_s, args.timelapse_duration_min, steady_seconds());
+      std::cout << " * Timelapse: one pair every " << args.timelapse_interval_s << " s for "
+                << args.timelapse_duration_min << " min (" << timelapse->expectedPairs()
+                << " pairs), pose_id 'thermal'" << std::endl;
+    }
+
     while (1) {
       if (key == 'q' || key == 'Q' || key == 27 || interruptRequested()) {
         std::cout << "Calibration aborted by user." << std::endl;
@@ -1177,8 +1224,35 @@ int main(int argc, char* argv[]) {
           drawBanner(rendering_image, {finish_message}, warn_color);
         }
 
+        if (timelapse) {
+          const double wait = std::max(0.0, timelapse->nextDue() - steady_seconds());
+          drawBanner(rendering_image,
+                     {"Timelapse: " + std::to_string(timelapse->takenPairs()) + "/" +
+                          std::to_string(timelapse->expectedPairs()) + " pairs, next in " +
+                          std::to_string(static_cast<int>(std::ceil(wait))) + " s",
+                      "Keep the target still. 'q': abort"},
+                     info_color);
+        }
         cv::imshow(window_name, rendering_image);
         key = cv::waitKey(10);
+
+        // --timelapse: the schedule replaces 's' and ends the record without
+        // calibrating (.ai/specs/aquecimento-termico R1)
+        bool timelapse_shot = false;
+        if (timelapse) {
+          const double now = steady_seconds();
+          if (timelapse->finished(now)) {
+            std::cout << ">>> Timelapse complete: " << std::max(image_count, 0) << " pairs saved, "
+                      << timelapse->skippedSlots() << " slots skipped" << std::endl;
+            end_meta("timelapse complete");
+            settings_guard.restore();
+            zed_camera.close();
+            return EXIT_SUCCESS;
+          }
+          timelapse_shot = timelapse->due(now);
+          if (timelapse_shot) timelapse->taken(now);
+          if (key == 'f' || key == 'F' || key == 's' || key == 'S' || key == ' ') key = -1;
+        }
 
         if (acquisition_completed) {
           const int count = std::max(image_count, 0);
@@ -1235,9 +1309,12 @@ int main(int argc, char* argv[]) {
           continue;
         }
 
-        if ((key == 's' || key == 'S') || key == ' ') {
+        if ((key == 's' || key == 'S') || key == ' ' || timelapse_shot) {
           finish_message.clear();
           std::cout << "*** New acquisition triggered ***" << std::endl;
+          if (timelapse_shot && !enough_tags)
+            std::cerr << "  ! Timelapse: target not seen by both cameras, pair "
+                      << timelapse->takenPairs() << " not saved" << std::endl;
 
           missing_target_on_last_pics =
               use_aprilgrid ? !enough_tags : (!found_r || !found_l);
@@ -1263,16 +1340,18 @@ int main(int argc, char* argv[]) {
 
             double sharpness_l = computeSharpness(rgb_l);
             double sharpness_r = computeSharpness(rgb_r);
-            blurry_images = sharpness_l < min_sharpness || sharpness_r < min_sharpness;
+            // the warm-up record keeps every pair: the analysis judges them
+            blurry_images = !timelapse &&
+                            (sharpness_l < min_sharpness || sharpness_r < min_sharpness);
             if (blurry_images) {
               std::cerr << "  ! Images too blurry (L=" << std::fixed
                         << std::setprecision(1) << sharpness_l
                         << " R=" << sharpness_r
                         << ", min=" << min_sharpness << "). Hold still and retry."
                         << std::endl;
-            } else if (use_aprilgrid
-                           ? checker.testSample(pts_l, outside_pts, full_size)
-                           : checker.testSample(pts_l, full_size)) {
+            } else if (timelapse ||
+                       (use_aprilgrid ? checker.testSample(pts_l, outside_pts, full_size)
+                                      : checker.testSample(pts_l, full_size))) {
               low_target_variability_on_last_pics = false;
 
               // saves the images
@@ -1283,8 +1362,9 @@ int main(int argc, char* argv[]) {
                 // Pair, then the detections of the saved files, read back as
                 // the calibration reads them (persistencia-captura R4-R7)
                 std::string rel_l, rel_r, io_error;
-                relativeImagePath("left", "free", image_count, rel_l, io_error);
-                relativeImagePath("right", "free", image_count, rel_r, io_error);
+                const std::string pose_label = timelapse ? "thermal" : "free";
+                relativeImagePath("left", pose_label, image_count, rel_l, io_error);
+                relativeImagePath("right", pose_label, image_count, rel_r, io_error);
                 const std::string path_l = capture_dir + "/" + rel_l;
                 const std::string path_r = capture_dir + "/" + rel_r;
                 if (!cv::imwrite(path_l, rgb_l) || !cv::imwrite(path_r, rgb_r)) {
@@ -1302,7 +1382,7 @@ int main(int argc, char* argv[]) {
                     cv::imread(path_r, cv::IMREAD_GRAYSCALE), aprilgrid.target,
                     aprilgrid.detector_params, &raw_r);
                 FrameDetections frame;
-                frame.pose_id = "free";
+                frame.pose_id = pose_label;
                 frame.n = image_count;
                 frame.file_left = rel_l;
                 frame.file_right = rel_r;
@@ -1343,6 +1423,7 @@ int main(int argc, char* argv[]) {
                           << std::endl;
               }
               image_count++;
+              if (timelapse) continue;  // no coverage metrics nor maximum in a record
 
               // The checker only reports complete metrics; the maximum is
               // handled here (.ai/specs/sample-limits/decisions.md D1)

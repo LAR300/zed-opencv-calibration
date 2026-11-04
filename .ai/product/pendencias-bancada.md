@@ -60,3 +60,11 @@
       calibração existente.
 - [ ] **Perguntas do spec ao usuário:** instrumento e ponto de referência da distância, distância
       mínima, instrumento da planicidade.
+
+## aquecimento-termico
+
+- [ ] **`--timelapse 30 60` com o alvo** (plan, etapa 1): 120 pares espaçados 30 ± 1 s, com as
+      temperaturas no `meta.json`. Sem o alvo, o modo já foi exercitado ao vivo.
+- [ ] **Três registros a frio** em dias diferentes (plan, etapa 4), câmera desligada há ≥ 2 h,
+      controles manuais (`--camera_settings`), luz fixa; depois `zedcal.thermal_command` e o X
+      proposto para aprovação.

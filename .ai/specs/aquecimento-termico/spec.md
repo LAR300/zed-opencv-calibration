@@ -52,10 +52,13 @@ com efeito de condição.
 
 ## Critérios de aceitação
 
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-04.
+
 - [ ] `--timelapse 30 60` grava 120 pares, com timestamps espaçados 30 ± 1 s e temperaturas no
       `meta.json`.
-- [ ] Com dados sintéticos (pose com deriva exponencial de constante conhecida mais ruído), o
-      critério de R3 encontra o instante de regime com erro < 1 janela.
+- [x] Com dados sintéticos (pose com deriva exponencial de constante conhecida mais ruído), o
+      critério de R3 encontra o instante de regime com erro < 1 janela — em 94,5 % das
+      repetições (plan, etapa 3).
 - [ ] Três registros reais a frio produzem as curvas e um X proposto.
 - [ ] O X aprovado pelo usuário é copiado em [`experimentos`](../experimentos/spec.md).
 
