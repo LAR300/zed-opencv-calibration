@@ -10,20 +10,30 @@
 
 ## Etapas
 
-- [ ] 1. **Exportar as detecções e F** (R1). Para cada captura, rodar
+- [x] 1. **Exportar as detecções e F** (R1). Quatro `detections.json` em `calib_runs/piloto/<captura>/` (35 + 29 + 35 + 25 pares); F em `calib_runs/piloto/fabrica/`, com `--verify`; o md5 das pastas originais não mudou.
+
+  Especificação original da etapa: Para cada captura, rodar
   `--use_stored_values --detections_out` a partir de uma cópia de trabalho em `calib_runs/piloto/`.
   Exportar a F da S/N 35180697.
   - **Pronto quando:** os 4 `detections.json` existem e o leitor do núcleo os aceita; as pastas
     originais têm o mesmo `ls -l` e `md5sum` de antes.
-- [ ] 2. **Calibrações** (R2). As 4 variantes por captura, com configs salvas.
+- [x] 2. **Calibrações** (R2). `analysis/piloto/run_piloto.py`: 16 calibrações. O modo compatível reproduz os YAML do C++ nas quatro capturas (K até 6e-8, T até 2e-5).
+
+  Especificação original da etapa: As 4 variantes por captura, com configs salvas.
   - **Pronto quando:** o modo compatível reproduz o YAML do C++ até 1e-6 relativo nas 3 capturas
     AprilGrid; as 16 calibrações têm YAML e relatório.
-- [ ] 3. **M1** (R3). RMS, mapa de resíduos e BR por câmera para as 16 calibrações e para F.
+- [x] 3. **M1** (R3). As 16 calibrações e F em cada captura; mapas de resíduos da variante compatível e de F.
+
+  Especificação original da etapa: RMS, mapa de resíduos e BR por câmera para as 16 calibrações e para F.
   - **Pronto quando:** existem 17 relatórios M1 com as figuras.
-- [ ] 4. **M2** (R3). A matriz de pares entre as calibrações AprilGrid (mesma variante), cada uma
+- [x] 4. **M2** (R3). Por variante, nas 3 capturas AprilGrid, com F e as três referências, na região coberta.
+
+  Especificação original da etapa: A matriz de pares entre as calibrações AprilGrid (mesma variante), cada uma
   contra F, e as três referências "média".
   - **Pronto quando:** as matrizes e os mapas de calor existem para cada variante.
-- [ ] 5. **Responder R4** e escrever `resultado.md` (R5).
+- [x] 5. **Responder R4** e escrever [`resultado.md`](resultado.md) (R5), com dois testes de causa feitos offline: empeno do alvo (sintético) e anisotropia do refino (cantos não refinados).
+
+  Especificação original da etapa:
   - **Pronto quando:** cada uma das seis perguntas tem um número e uma figura de apoio, e cada
     decisão pendente tem uma recomendação justificada.
 - [ ] 6. **Revisão do usuário.**
