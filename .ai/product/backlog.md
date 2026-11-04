@@ -237,7 +237,7 @@ Por que esta ordem:
   - Define o `<X min>` do protocolo. A literatura lida não traz esse número (Shortis não trata
     disso).
 
-- [ ] **validacao-cruzada** — M3: leave-one-capture-out, matriz 10×10
+- [x] **validacao-cruzada** — M3: leave-one-capture-out, matriz 10×10
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: nucleo-offline
   - Calibra com a captura i e avalia nas imagens da captura j.

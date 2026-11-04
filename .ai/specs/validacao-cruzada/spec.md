@@ -52,14 +52,17 @@ Python (`calib_runs/tools/crossval*.py`; auditoria, risco 6).
 
 ## Critérios de aceitação
 
-- [ ] **Diagonal = treino:** com i = j, o RMS da esquerda reproduz o RMS da esquerda com pose livre
-      do M1 para a mesma calibração e as mesmas detecções, até 1e-6 px.
-- [ ] **Dados sintéticos:**
-  - uma calibração com o modelo verdadeiro avaliada em outra captura sintética dá RMS ≈ σ√2;
-  - uma calibração com fx 1 % errado dá RMS fora da diagonal maior que o da verdadeira;
-  - um T com 1 mm a mais em x aumenta só o erro de transferência da direita, não o da esquerda.
-- [ ] F e a média aparecem como linhas da matriz.
-- [ ] A aplicação cruzada A × B com dois conjuntos sintéticos produz a matriz n_A × n_B.
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-03.
+
+- [x] **Diagonal = treino:** com i = j, o RMS da esquerda reproduz o RMS da esquerda com pose livre
+      do M1 (`points: all`) para a mesma calibração e as mesmas detecções, até 1e-6 px.
+- [x] **Dados sintéticos:** o modelo verdadeiro em outra captura dá RMS ≈ σ√2; fx 1 % errado piora a
+      esquerda mais de 2×; um T com 1 mm a mais em x mexe só na transferência para a direita.
+- [x] F (e qualquer calibração extra, como a referência) aparece como linha da matriz.
+- [x] A aplicação cruzada usa a mesma matriz com linhas e colunas de condições diferentes (teste
+      4 × 3).
+
+Resultado nas capturas do piloto e a decisão `joint`: plan, etapa 5.
 
 ## Perguntas em aberto
 

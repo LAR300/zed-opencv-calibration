@@ -143,7 +143,7 @@
 
 | Decisão | Origem | Valor |
 |---|---|---|
-| Variante de calibração (`joint` ou `fixed`; com ou sem rejeição) | piloto | rejeição `none` nas análises offline (usuário, 2026-11-03); `joint` × `fixed` decidido pelo M3 (`validacao-cruzada`) sobre as capturas do piloto |
+| Variante de calibração (`joint` ou `fixed`; com ou sem rejeição) | piloto e M3 | **`joint`**, intrínsecos refinados com R, T, como o C++: no M3 sobre as capturas do piloto ele generaliza melhor nos extrínsecos (transferência para a direita 0,54 contra 0,68 px), com os intrínsecos empatados. Rejeição `none` nas análises offline (usuário, 2026-11-03) |
 | N mínimo de cantos por célula | piloto e cobertura | — |
 | X min de aquecimento | aquecimento-termico | — |
 | Margens do TOST e orçamento de erro | analise-estatistica | — |
