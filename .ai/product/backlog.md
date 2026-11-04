@@ -186,6 +186,11 @@ Por que esta ordem:
     - Já descartados offline: o empeno do alvo, a anisotropia do refino, a seleção de tags e,
       em 2026-11-04, o movimento durante a leitura do sensor (existe, inclusive no xadrez, mas
       explica ~1–2 % do resíduo; `resultado.md` do piloto).
+    - **Causa encontrada offline (2026-11-04):** a geometria do alvo impresso. Os cantos estão
+      ~0,4 mm fora da grade ideal, de forma repetível entre capturas, e o alvo está esticado
+      ~0,23 % em Y (isso vira o excesso de fy/fx). Um mapa por canto, com validação cruzada, tira
+      ~35 % do ε_bias. Decisão pendente: alvo melhor, estimar a geometria do alvo, ou aceitar
+      (`resultado.md` do piloto).
   - **Na bancada:** medir a planicidade do alvo; fazer uma captura com o roteiro v1 (inclinações nos
     dois eixos e alvo girado); fazer uma captura de xadrez com as mesmas poses; comparar BR e fy/fx.
 

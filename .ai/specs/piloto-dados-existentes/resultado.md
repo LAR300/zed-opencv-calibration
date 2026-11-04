@@ -146,6 +146,51 @@ O ajuste da referência fechou com 0,0002–0,0004 px.
    - As distribuições de contagem por célula nestas capturas estão em
      [`cobertura/plan.md`](../cobertura/plan.md), etapa 5.
 
+## Diagnóstico offline do viés AprilGrid (2026-11-04)
+
+Feito com os dados existentes, sem o alvo, como parte do `diagnostico-vies-aprilgrid`. Scripts
+exploratórios em `analysis/piloto/`; variante `compat`, rejeição `none`.
+
+1. **O refino não é a causa.** Calibrando com os cantos antes do refino (`refinement.py`), o
+   ε_bias sobe de 0,19 para 1,3–2,0 px: o refino tira ~90 % do viés. O excesso de fy/fx continua
+   (+0,20–0,25 %), então ele também não vem do refino.
+2. **O excesso de fy/fx é o alvo esticado em Y.** Com os intrínsecos de F fixos
+   (`target_aspect.py`), as três capturas AprilGrid preferem o modelo do alvo esticado
+   **+0,20–0,28 % no eixo Y do alvo**, nas duas câmeras; o xadrez, +0,04–0,09 %. Calibrando com o
+   alvo esticado +0,23 % (`target_aspect_br.py`), fy/fx cai para −0,01…+0,08 %, como o xadrez e
+   F. Como as vistas mantêm o alvo quase em pé (rotação no plano entre −22° e +24°), a calibração
+   põe esse erro do alvo em fy/fx. Em 660 mm, 0,23 % são ~1,5 mm: dá para medir largura × altura
+   do alvo na bancada.
+3. **O BR não vem das bordas** (`br_by_region.py`): nos tags centrais, o BR fica em 0,56–0,67.
+4. **O resto do viés é um padrão fixo do alvo impresso** (`tag_coherence.py`): ~60 % da energia
+   do resíduo é o deslocamento do tag inteiro (o esperado com cantos independentes é 25 %), e o
+   deslocamento de cada tag no plano do alvo (~0,3 mm RMS) se repete entre as três capturas
+   (correlação 0,92–0,94).
+5. **Corrigindo o alvo com um mapa medido nos dados, com validação cruzada** (o mapa de cada
+   captura vem só das outras duas):
+
+   | Mapa | RMS esquerda (px) | BR esquerda | ε_bias esquerda (px) |
+   |---|---:|---:|---:|
+   | nenhum (grade nominal) | 0,305–0,367 | 0,70–0,73 | 0,185–0,219 |
+   | por tag (36 deslocamentos, `target_map_cv.py`) | 0,260–0,306 | 0,58–0,60 | 0,145–0,165 |
+   | por canto (144 deslocamentos, ~0,41 mm RMS, `corner_map_cv.py`) | 0,229–0,268 | 0,53–0,54 | 0,122–0,136 |
+
+   O mapa por canto tira ~25 % do RMS e ~35 % do ε_bias. O que sobra (ε_bias ~0,12 px) inclui
+   o ruído de um mapa estimado com só duas capturas.
+
+**Conclusão:** o viés das calibrações AprilGrid é, na maior parte, **erro de geometria do alvo
+impresso**: cantos ~0,4 mm fora da grade ideal, de forma repetível, mais um esticamento de ~0,23 %
+em Y que vira fy/fx. Não é a detecção, nem as bordas da imagem, nem o movimento.
+
+**Decisões para o usuário** (antes da condição A):
+- (a) **um alvo melhor:** impressão de precisão em base rígida e plana (ex.: alumínio composto ou
+  vidro), com o certificado do fabricante; ou
+- (b) **estimar a geometria do alvo junto com a calibração** (ajuste de feixes com os pontos do
+  alvo livres, como o `calibrateCameraRO` do OpenCV, que não aceita vistas parciais; seria
+  implementado no `zedcal`), usando as capturas de A; ou
+- (c) **manter o alvo atual** e aceitar o viés, sabendo que ele entra em fy/fx e no BR.
+- Em qualquer caso, **medir largura e altura do alvo** na bancada, para confirmar o esticamento.
+
 ## Perguntas ao usuário
 
 - Aprovar ou ajustar as recomendações 1 a 5.

@@ -79,3 +79,10 @@
       instalação não deve mudar nada (plan, etapa 2).
 - [ ] **Recriar o container** e conferir que o `--check` reprova o SDK e que
       `scripts/bench/fix_zed_group.sh` o conserta (plan, etapas 1 e 3).
+
+## diagnostico-vies-aprilgrid
+
+- [ ] **Medir largura e altura do alvo** (régua de aço ou trena boa, de borda externa a borda
+      externa das tags): o offline prevê o eixo Y do alvo ~0,23 % (~1,5 mm em 660 mm) maior que o
+      X, em relação à grade nominal.
+- [ ] **Planicidade** do alvo (já pedida em `validacao-metrica` R4).
