@@ -60,6 +60,9 @@ void writeSession(cv::FileStorage& fs, const Session& s) {
      << s.calibration.max_rms_px << "outlier_factor" << s.calibration.outlier_factor
      << "outlier_floor_px" << s.calibration.outlier_floor_px << "prior"
      << s.calibration.prior << "}";
+  fs << "static_capture" << "{" << "window_s" << s.static_capture.window_s
+     << "max_displacement_px" << s.static_capture.max_displacement_px << "min_target_sharpness"
+     << s.static_capture.min_target_sharpness << "}";
   fs << "}";
 }
 

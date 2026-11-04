@@ -370,3 +370,20 @@ TEST(session_calibration_rejects_invalid_values) {
     CHECK(contains(error, name));
   }
 }
+
+TEST(session_static_capture_defaults_and_values) {
+  Session s;
+  std::string error;
+  CHECK(load(join(kBaseLines), s, error));
+  CHECK_NEAR(s.static_capture.window_s, 1.0, 1e-12);
+  CHECK(s.static_capture.max_displacement_px > 0);
+  CHECK(s.static_capture.min_target_sharpness == 0.0);  // off until measured on the bench
+  CHECK(load(join(kBaseLines) + "static_capture:\n  window_s: 1.5\n  max_displacement_px: 0.2\n"
+                                "  min_target_sharpness: 150\n", s, error));
+  CHECK_NEAR(s.static_capture.window_s, 1.5, 1e-12);
+  CHECK_NEAR(s.static_capture.max_displacement_px, 0.2, 1e-12);
+  CHECK_NEAR(s.static_capture.min_target_sharpness, 150.0, 1e-12);
+  CHECK(!load(join(kBaseLines) + "static_capture:\n  window_s: 0\n", s, error));
+  CHECK(contains(error, "static_capture.window_s"));
+  CHECK(!load(join(kBaseLines) + "static_capture:\n  min_target_sharpness: -1\n", s, error));
+}

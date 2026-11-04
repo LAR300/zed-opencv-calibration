@@ -283,6 +283,28 @@ bool loadSession(const std::string& path, Session& session, std::string& error) 
     choice("prior", c.prior, {"none", "factory"});
   }
 
+  cv::FileNode still = fs["static_capture"];
+  if (error.empty() && !still.empty() && !still.isNone()) {
+    auto& c = session.static_capture;
+    auto number = [&](const char* key, double& value, double min, bool strict) {
+      cv::FileNode n = still[key];
+      if (!error.empty() || n.empty() || n.isNone()) return;
+      const double v = (n.isInt() || n.isReal()) ? n.real() : -1e300;
+      if (v == -1e300 || (strict ? v <= min : v < min)) {
+        std::ostringstream ss;
+        ss << "Field 'static_capture." << key << "' must be a number "
+           << (strict ? "greater than " : "at least ") << min;
+        error = ss.str();
+        return;
+      }
+      value = v;
+    };
+    if (!still.isMap()) error = "Field 'static_capture' must be a section with its own fields";
+    number("window_s", c.window_s, 0.0, true);
+    number("max_displacement_px", c.max_displacement_px, 0.0, true);
+    number("min_target_sharpness", c.min_target_sharpness, 0.0, false);
+  }
+
   if (!error.empty()) {
     error += " in '" + path + "'";
     session = Session();

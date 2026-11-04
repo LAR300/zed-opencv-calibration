@@ -40,3 +40,9 @@ calibration:                     # optional; these are the defaults (spec saida-
   outlier_factor: 2.5            # a view is removed above max(factor * median, floor)
   outlier_floor_px: 0.5
   prior: none                    # none: from scratch | factory: start from the factory calibration
+
+static_capture:                  # optional (spec captura-estatica); PROVISIONAL defaults
+  window_s: 1.0                  # the target must be still this long before a pair is saved
+  max_displacement_px: 0.5       # RMS corner motion between frames counted as "still";
+                                 # set from noise.json (--measure_static_noise) on the bench
+  min_target_sharpness: 0        # Laplacian variance on the tags; 0 = not checked until measured

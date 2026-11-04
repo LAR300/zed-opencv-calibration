@@ -45,6 +45,15 @@ struct CalibrationConfig {
   std::string prior = "none";       // none | factory
 };
 
+// Static capture thresholds (spec captura-estatica, R3). Optional section. The
+// defaults are provisional: the bench measures the static noise with
+// --measure_static_noise and the session takes its values from noise.json.
+struct StaticCaptureConfig {
+  double window_s = 1.0;               // "~1 s" of the brief
+  double max_displacement_px = 0.5;    // provisional
+  double min_target_sharpness = 0.0;   // 0: not checked until measured
+};
+
 struct Session {
   std::string output_root;
   std::string condition;  // [A-Za-z0-9_-]+
@@ -55,6 +64,7 @@ struct Session {
   PortGeometry port;
   Medium medium;
   CalibrationConfig calibration;
+  StaticCaptureConfig static_capture;
 };
 
 // Read and validate a session file. Every field must be present; unknown

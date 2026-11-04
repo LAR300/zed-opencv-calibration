@@ -8,15 +8,21 @@
 
 ## Etapas
 
-- [ ] 1. **Acompanhamento de cantos** (R1). `StabilityTracker`: recebe as detecções E/D por quadro,
+- [x] 1. **Acompanhamento de cantos** (R1). `common/capture_io/static_capture.{hpp,cpp}` (`StabilityTracker`). Os três casos sintéticos passam, mais o de cantos comuns insuficientes ("indeterminado").
+
+  Especificação original da etapa: `StabilityTracker`: recebe as detecções E/D por quadro,
   com o timestamp; devolve o deslocamento RMS das tags comuns ao quadro anterior e o tempo estável
   acumulado.
   - Testes primeiro: os três casos sintéticos do critério de imobilidade.
   - **Pronto quando:** `ctest` verde.
-- [ ] 2. **Nitidez por polígono** (R2). Variância do Laplaciano na máscara dos polígonos das tags.
+- [x] 2. **Nitidez por polígono** (R2). `targetSharpness`. Testes: com o alvo borrado sobre um fundo nítido, a medida da imagem inteira muda < 10 % e a medida nas tags cai > 5×; com o alvo nítido sobre um fundo liso, a medida nas tags fica > 5× a da imagem inteira.
+
+  Especificação original da etapa: Variância do Laplaciano na máscara dos polígonos das tags.
   - Testes primeiro: os dois casos sintéticos do critério de nitidez.
   - **Pronto quando:** `ctest` verde.
-- [ ] 3. **Seção `static_capture` da sessão** (R3), com validação.
+- [x] 3. **Seção `static_capture` da sessão** (R3). `StaticCaptureConfig`, opcional, copiado no `meta.json` e no exemplo. Os padrões são **provisórios**: janela de 1,0 s, 0,5 px e nitidez mínima 0 (não conferida), até a medida de bancada (etapa 4).
+
+  Especificação original da etapa:
   - Testes primeiro: valores ausentes usam os padrões; valores ≤ 0 são recusados.
   - **Pronto quando:** `ctest` verde.
 - [ ] 4. **Modo `--measure_static_noise`** (R7). Com o alvo parado, grava N segundos de deslocamento
