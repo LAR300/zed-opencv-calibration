@@ -99,18 +99,20 @@ O brief pede M1 como **filtro, não validação**:
 
 ## Critérios de aceitação
 
-- [ ] **Dados sintéticos sem viés** (σ = 0,1 px, modelo verdadeiro = modelo ajustado): BR < 0,05 e
-      σ̂_d a menos de 10 % de 0,1 px.
-- [ ] **Distorção omitida:** dados gerados com o racional de 8 coeficientes e k1 forte, ajustados
-      sem distorção. BR > 0,5.
-- [ ] **Alvo não plano:** dados com flecha de 1 mm no centro do alvo de 660 mm. BR maior que no
-      caso sem viés, com o mesmo ruído.
-- [ ] **Convenção:** tratar o RMS² do OpenCV como MSE por coordenada nos dados sem viés dá
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-03.
+
+- [x] **Dados sintéticos sem viés** (σ = 0,1 px, modelo verdadeiro = modelo ajustado): BR < 0,05 e
+      σ̂_d a menos de 10 % de 0,1 px (com o estimador aparado de R3).
+- [x] **Distorção omitida:** dados gerados com o racional e k1 = −0,30, ajustados sem distorção:
+      BR > 0,5.
+- [x] **Alvo não plano:** flecha de 1 mm no centro do alvo de 660 mm. BR maior que no caso sem
+      viés, com o mesmo ruído.
+- [x] **Convenção:** tratar o RMS² do OpenCV como MSE por coordenada nos dados sem viés dá
       BR ≈ 0,5. Esse teste documenta a armadilha 1.
-- [ ] O mapa de resíduos de dados sintéticos com um viés vertical imposto (Δy = +0,2 px na metade
+- [x] O mapa de resíduos de dados sintéticos com um viés vertical imposto (Δy = +0,2 px na metade
       superior da imagem) mostra o sinal na média de y das células certas.
-- [ ] Nas detecções de `2026-11-03_camera_settings`, com o YAML do C++, o módulo produz o relatório
-      e as figuras sem erro.
+- [x] Nas detecções de `2026-11-03_camera_settings`, com o YAML do C++, o módulo produz o relatório
+      e as figuras sem erro: BR 0,71 / 0,66; ver plan, etapa 6.
 
 ## Perguntas em aberto
 

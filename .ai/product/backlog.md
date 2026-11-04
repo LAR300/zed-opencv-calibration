@@ -140,7 +140,7 @@ Por que esta ordem:
     explicitamente, para o Bias Ratio (risco 5).
   - **Teste:** a recalibração offline reproduz o resultado C++ com as mesmas detecções.
 
-- [ ] **metrica-ajuste** — M1: RMS, mapa de resíduos e Bias Ratio
+- [x] **metrica-ajuste** — M1: RMS, mapa de resíduos e Bias Ratio
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: nucleo-offline
   - **Bias Ratio por câmera, como Hagemann (2022):**

@@ -1,3 +1,5 @@
+import os
+
 import cv2
 import numpy as np
 import pytest
@@ -115,3 +117,49 @@ def test_bent_board_raises_the_bias_ratio(tmp_path, unbiased):
     c = calib.calibrate(det, calib.CalibrationOptions(rejection="none")).calibration
     b = m1.bias_ratio(m1.camera_fit(det, left_camera(c), "left"), left_camera(c), det.target, 12)
     assert b.br > b0.br, (b.br, b0.br)
+
+
+def test_rms_report_without_noise_and_with_noise(tmp_path):
+    rig = synthetic.zed_like_rig()
+    poses = synthetic.random_poses(8, np.random.default_rng(31))
+    for sigma, expected in ((0.0, 0.0), (0.1, 0.1 * np.sqrt(2))):
+        path = str(tmp_path / ("r%s.json" % sigma))
+        synthetic.write(path, synthetic.generate(rig, poses, sigma_px=sigma, rng=np.random.default_rng(32)))
+        det = io.load_detections(path)
+        r = m1.rms_report(det, rig)           # evaluated with the true calibration
+        for key in ("stereo", "stereo_fit_left", "free_pose_right"):
+            assert abs(r["rms_px"][key] - expected) < (1e-6 if sigma == 0 else 0.015), (key, r)
+        assert r["filter"]["passed"]
+        assert m1.rms_report(det, rig, max_rms_px=0.05)["filter"]["passed"] == (sigma == 0)
+
+
+def test_residual_map_shows_an_imposed_vertical_bias():
+    rng = np.random.default_rng(41)
+    pts = rng.uniform([0, 0], [1280, 720], (20000, 2))
+    res = rng.normal(0, 0.05, (20000, 2))
+    res[pts[:, 1] < 360, 1] += 0.2           # +0.2 px in y in the upper half
+    m = m1.residual_map(pts, res, (1280, 720), (8, 8))
+    assert np.all(m["mean_y_px"][:4] > 0.15) and np.all(np.abs(m["mean_y_px"][4:]) < 0.05)
+    assert np.all(np.abs(m["mean_x_px"]) < 0.05)
+
+
+def test_residual_map_empty_cell_is_nan_not_zero():
+    m = m1.residual_map(np.array([[10.0, 10.0]]), np.array([[0.1, 0.1]]), (1280, 720), (8, 8))
+    assert m["count"][0, 0] == 1 and np.isnan(m["rms_px"][7, 7]) and np.isnan(m["mean_x_px"][3, 3])
+
+
+def test_m1_command_writes_report_and_figures(tmp_path):
+    import yaml
+    from zedcal import m1_command
+    from zedcal.calib_file import write_calibration
+    rig = synthetic.zed_like_rig()
+    det_path = str(tmp_path / "d.json")
+    synthetic.write(det_path, synthetic.generate(rig, synthetic.random_poses(10, np.random.default_rng(5)),
+                                                 sigma_px=0.1, rng=np.random.default_rng(6)))
+    write_calibration(str(tmp_path / "truth.yml"), rig)
+    cfg = {"detections": det_path, "calibration": str(tmp_path / "truth.yml"),
+           "output_dir": str(tmp_path / "m1")}
+    yaml.safe_dump(cfg, open(tmp_path / "m1.yaml", "w"))
+    assert m1_command.main(["--config", str(tmp_path / "m1.yaml")]) == 0
+    files = sorted(os.listdir(tmp_path / "m1"))
+    assert files == ["config.yaml", "m1_truth.json", "m1_truth_left.png", "m1_truth_right.png"]
