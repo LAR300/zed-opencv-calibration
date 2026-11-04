@@ -60,15 +60,17 @@ reprovada é refeita**.
 
 ## Critérios de aceitação
 
-- [ ] **Dados sintéticos:** uma captura com todas as células acima de N e inclinações > 30° nos dois
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-03.
+
+- [x] **Dados sintéticos:** uma captura com todas as células acima de N e inclinações > 30° nos dois
       eixos, com os dois sinais, é aprovada.
-- [ ] Removendo os pares que cobrem o canto superior direito, a captura é reprovada com o motivo
+- [x] Removendo os pares que cobrem o canto superior direito, a captura é reprovada com o motivo
       "célula de canto (0,7) abaixo de N".
-- [ ] Removendo as poses inclinadas em torno do eixo vertical, a captura é reprovada com o motivo
+- [x] Removendo as poses inclinadas em torno do eixo vertical, a captura é reprovada com o motivo
       "inclinação vertical insuficiente".
-- [ ] As inclinações calculadas em Python coincidem com as do `common/pose_script/` C++ até 0,1°
+- [x] As inclinações calculadas em Python coincidem com as do `common/pose_script/` C++ até 0,1°
       numa pose sintética.
-- [ ] Nas 3 capturas AprilGrid existentes, o comando gera os mapas e os histogramas. Esses
+- [x] Nas 3 capturas AprilGrid existentes, o comando gera os mapas e os histogramas. Esses
       números servem para propor N.
 
 ## Perguntas em aberto

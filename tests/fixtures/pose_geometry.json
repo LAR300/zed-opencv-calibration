@@ -1,0 +1,135 @@
+{
+  "comment": "Target poses built by hand with their expected view geometry (conventions in common/pose_script/pose_script.hpp). Shared by the C++ and Python tests so the two implementations stay identical (spec cobertura, plan step 3).",
+  "camera": {
+    "K": [
+      [
+        534,
+        0,
+        640
+      ],
+      [
+        0,
+        534,
+        360
+      ],
+      [
+        0,
+        0,
+        1
+      ]
+    ],
+    "image_size": [
+      1280,
+      720
+    ]
+  },
+  "board_mm": [
+    660,
+    660
+  ],
+  "frontal_fraction": 0.27534375,
+  "cases": [
+    {
+      "name": "frontal",
+      "rvec": [
+        3.141592653589793,
+        0.0,
+        0.0
+      ],
+      "tvec": [
+        -330.0,
+        330.0,
+        1000.0
+      ],
+      "tilt_h_deg": 0,
+      "tilt_v_deg": 0,
+      "rotation_deg": 0,
+      "distance_m": 1.0
+    },
+    {
+      "name": "tilt_h_minus20",
+      "rvec": [
+        -2.7925268031909294,
+        0.0,
+        0.0
+      ],
+      "tvec": [
+        -330.0,
+        310.0985648593498,
+        1112.8666472974708
+      ],
+      "tilt_h_deg": -20,
+      "tilt_v_deg": 0,
+      "rotation_deg": 0,
+      "distance_m": 1.0
+    },
+    {
+      "name": "tilt_v_plus30",
+      "rvec": [
+        3.0345454797823876,
+        0.0,
+        0.8131040107032045
+      ],
+      "tvec": [
+        -285.78838324886476,
+        330.0,
+        835.0
+      ],
+      "tilt_h_deg": 0,
+      "tilt_v_deg": 30,
+      "rotation_deg": 0,
+      "distance_m": 1.0
+    },
+    {
+      "name": "own_rotation_90",
+      "rvec": [
+        2.221441469079183,
+        -2.221441469079183,
+        0.0
+      ],
+      "tvec": [
+        330.0,
+        330.0,
+        1000.0
+      ],
+      "tilt_h_deg": 0,
+      "tilt_v_deg": 0,
+      "rotation_deg": 270,
+      "distance_m": 1.0
+    },
+    {
+      "name": "own_rotation_180",
+      "rvec": [
+        -1.9236706937217898e-16,
+        3.141592653589793,
+        0.0
+      ],
+      "tvec": [
+        330.00000000000006,
+        -329.99999999999994,
+        1000.0
+      ],
+      "tilt_h_deg": 0,
+      "tilt_v_deg": 0,
+      "rotation_deg": 180,
+      "distance_m": 1.0
+    },
+    {
+      "name": "tilt_h_plus35",
+      "rvec": [
+        2.5307274153917785,
+        0.0,
+        0.0
+      ],
+      "tvec": [
+        -330.0,
+        270.3201746153673,
+        810.7197760041548
+      ],
+      "tilt_h_deg": 35,
+      "tilt_v_deg": 0,
+      "rotation_deg": 0,
+      "distance_m": 1.0
+    }
+  ]
+}

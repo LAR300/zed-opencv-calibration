@@ -150,3 +150,22 @@ TEST(check_pose_per_quantity) {
   v = view(cv::Matx33d::eye(), cv::Matx33d::eye(), {0, 0, 1000});
   CHECK(checkPose(v, p, t).rotation);  // 0 and 358 are 2 deg apart
 }
+
+TEST(view_geometry_matches_the_shared_fixture) {
+  // The same fixture is checked by analysis/tests/test_coverage.py
+  cv::FileStorage fs(std::string(ZEDCAL_SOURCE_DIR) + "/tests/fixtures/pose_geometry.json",
+                     cv::FileStorage::READ | cv::FileStorage::FORMAT_JSON);
+  CHECK(fs.isOpened());
+  int n = 0;
+  for (const auto& c : fs["cases"]) {
+    cv::Vec3d rvec(c["rvec"][0].real(), c["rvec"][1].real(), c["rvec"][2].real());
+    cv::Vec3d tvec(c["tvec"][0].real(), c["tvec"][1].real(), c["tvec"][2].real());
+    const ViewGeometry v = viewGeometry(K(), D0(), kImage, kBoard, rvec, tvec);
+    CHECK_NEAR(v.tilt_h_deg, c["tilt_h_deg"].real(), 1e-6);
+    CHECK_NEAR(v.tilt_v_deg, c["tilt_v_deg"].real(), 1e-6);
+    CHECK(angleDifferenceDeg(v.rotation_deg, c["rotation_deg"].real()) < 1e-6);
+    CHECK_NEAR(v.distance_m, c["distance_m"].real(), 1e-9);
+    n++;
+  }
+  CHECK(n == 6);
+}

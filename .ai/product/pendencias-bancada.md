@@ -30,3 +30,22 @@
       (este com o chute inicial do SDK, e não da F exportada). Ao vivo, isso cobre também o item
       "calibração gravada na pasta da captura" da `persistencia-captura`. Sem a câmera, isso foi
       verificado com `--recalibrate`.
+
+## roteiro-poses
+
+- [ ] **Fase B inteira** (plan, etapas 4–7): modo roteiro na coleta (pose esperada e grandezas na
+      tela, salvamento só dentro da tolerância), teclas `o`/`k`/`b`, a captura completa das 63
+      poses com o tempo registrado e a revisão das tolerâncias, e o guia de bancada. A lógica pura
+      (Fase A) está pronta e testada.
+
+## captura-estatica
+
+- [ ] **`--measure_static_noise`** (plan, etapa 4): medir com o alvo parado e trocar os limiares
+      provisórios de `config/session_example.yaml` (1,0 s, 0,5 px, nitidez 0) pelos medidos.
+- [ ] **Integração na coleta** (plan, etapa 5): painel, bloqueio do `s` e campos no `meta.json`,
+      com a regressão do xadrez idêntica.
+
+## cobertura
+
+- [ ] **Rever N depois da primeira captura completa com roteiro** (plan, risco). O N foi escolhido
+      a partir de capturas que não seguiram o roteiro.

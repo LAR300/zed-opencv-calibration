@@ -142,6 +142,8 @@ O ajuste da referência fechou com 0,0002–0,0004 px.
 5. **Referência "média" do M2:** manter a do espaço da imagem (spec `erro-mapeamento` R5). Ela é
    equivalente à média simples nestes dados e mais robusta quando as distorções divergem.
 6. **N mínimo por célula (cobertura):** fica para quando o módulo `cobertura` existir.
+   - As distribuições de contagem por célula nestas capturas estão em
+     [`cobertura/plan.md`](../cobertura/plan.md), etapa 5.
 
 ## Perguntas ao usuário
 
