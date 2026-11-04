@@ -315,7 +315,8 @@ long exposure blurs a moving target. To keep the capture conditions constant, pa
 #### Traceable Capture (`--session`)
 
 For calibrations that must be compared, repeated or reprocessed later (with other models, or with a
-refractive model under water), a session file makes every capture self-contained:
+refractive model under water), a session file makes every capture self-contained. The step-by-step workflow, in Portuguese, with an example session, is in
+[`.ai/docs/fluxo-calibracao.md`](.ai/docs/fluxo-calibracao.md).
 
 ```bash
 ./zed_stereo_calibration --target_yaml target.yaml --camera_settings ../../config/camera_settings_zed2i.yaml \

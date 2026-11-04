@@ -1,0 +1,54 @@
+# Exemplo de sessão para uma captura da condição A (ar, sem acrílico), com o roteiro v1.
+# Guia do fluxo: .ai/docs/fluxo-calibracao.md. Referência de cada campo: config/session_example.yaml.
+#
+# Copie este arquivo para fora do repositório (ex.: calib_runs/dados/sessoes/) antes de editar.
+# Para cada captura nova, mude só 'capture' (1, 2, 3...). A ferramenta copia a sessão usada para
+# dentro da pasta da captura, então o arquivo pode ser reaproveitado.
+#
+# Todo campo é obrigatório: escreva null para o que não se sabe ou não se aplica. Textos que
+# começam com dígito (datas, lente) vão entre aspas.
+
+output_root: /workspaces/isaac_ros-dev/dev/calib_runs/dados
+condition: A_ar_sem_acrilico
+capture: 1                       # 1..99 -> captura_01..captura_99; a pasta não pode existir
+lens: "2.1mm"
+note: ""                         # ex.: "alvo novo", "sala a 23 C"
+
+target_measured:                 # medido com paquímetro antes da primeira captura da condição
+  tag_size_mm: 88.0              # SUBSTITUIR pelo valor medido (aqui: o nominal do target.yaml)
+  tag_spacing_mm: 26.4           # SUBSTITUIR pelo valor medido (tagSpacing x tagSize)
+  planarity_mm: null             # maior desvio de um plano, régua e lâmina
+  measured_on: null              # ex.: "2026-11-10"
+  tag_sides_mm: null             # só na sessão do teste métrico
+  spacings_mm: null
+  board_side_mm: null
+  planarity_grid_mm: null
+
+port:                            # ar sem acrílico: tudo null
+  present: false
+  material: null
+  thickness_mm: null
+  lens_to_port_mm: null
+  tilt_deg: null
+  refractive_index: null
+
+medium:
+  type: air
+  water_temperature_c: null
+  salinity_psu: null
+  refractive_index: null
+
+calibration:                     # os padrões; a calibração parte do zero, independente de F
+  model: rational8
+  max_rms_px: 0.5
+  outlier_factor: 2.5
+  outlier_floor_px: 0.5
+  prior: none
+
+static_capture:                  # PROVISÓRIO: trocar pelos valores do noise.json
+  window_s: 1.0                  # (--measure_static_noise) quando forem medidos na bancada
+  max_displacement_px: 0.5
+  min_target_sharpness: 0
+
+roteiro: /workspaces/isaac_ros-dev/dev/zed-opencv-calibration/config/roteiro_v1.yaml
+pose_calibration: null           # null = <output_root>/fabrica/SN<serial>/calib_factory_rational8.yml

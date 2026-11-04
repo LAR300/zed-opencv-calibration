@@ -82,7 +82,7 @@
   2. **em B1:** registrar a montagem da tampa (data, quem montou, observações). Nas capturas
      seguintes, conferir que ela não foi mexida;
   3. executar o roteiro v1 completo;
-  4. rodar a cobertura (`python3 -m zedcal.coverage`). Se for **reprovada**:
+  4. rodar a cobertura (`python3 -m zedcal.coverage_command`). Se for **reprovada**:
      - marcar a pasta com o arquivo `REPROVADA` e o motivo;
      - refazer como uma nova captura, com o número seguinte;
      - **nada é apagado**;
