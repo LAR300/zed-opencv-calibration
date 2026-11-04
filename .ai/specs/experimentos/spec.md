@@ -143,10 +143,13 @@
 
 | Decisão | Origem | Valor |
 |---|---|---|
-| Variante de calibração (`joint` ou `fixed`; com ou sem rejeição) | piloto | — |
+| Variante de calibração (`joint` ou `fixed`; com ou sem rejeição) | piloto | rejeição `none` nas análises offline (usuário, 2026-11-03); `joint` × `fixed` decidido pelo M3 (`validacao-cruzada`) sobre as capturas do piloto |
 | N mínimo de cantos por célula | piloto e cobertura | — |
 | X min de aquecimento | aquecimento-termico | — |
 | Margens do TOST e orçamento de erro | analise-estatistica | — |
+| Limiar de BR | piloto | nenhum por ora; referência: xadrez 0,24–0,31 (usuário, 2026-11-03) |
+| Referência "média" do M2 | piloto | no espaço da imagem (usuário, 2026-11-03) |
+| Pré-condição de A | piloto | o viés do AprilGrid (BR ≈ 0,7) diagnosticado antes da primeira captura (`diagnostico-vies-aprilgrid`; usuário, 2026-11-03) |
 | α dos portões | analise-estatistica | — |
 | Margem de "empata" do portão A, por métrica | este spec | — |
 | k poses puladas permitidas | este spec | — |

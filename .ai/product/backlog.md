@@ -26,7 +26,9 @@ Fase 2  implementação, um módulo por vez, com testes
         ├─ base de dados:  ambiente-sensores · persistencia-captura · exportar-fabrica · saida-calibracao
         ├─ métricas:       nucleo-offline → metrica-ajuste → erro-mapeamento
         ├─ piloto:         piloto-dados-existentes ─────────────── confere métricas e fy/fx
-        ├─ captura:        roteiro-poses · captura-estatica · cobertura · aquecimento-termico
+        ├─ diagnóstico:    validacao-cruzada (M3, decide joint × fixed) → roteiro-poses ·
+        │                  captura-estatica → diagnostico-vies-aprilgrid (bancada)
+        ├─ captura:        cobertura · aquecimento-termico
         ├─ validação:      validacao-cruzada · metricas-tarefa · analise-estatistica · validacao-metrica
         └─ (paralelo)      higiene-ferramentas
 Fase 3  execucao-a ─────────────── portão A: nossa calibração empata ou supera F na validação?
@@ -164,7 +166,7 @@ Por que esta ordem:
   - Em aberto para o spec: a "média" de parâmetros de distorção é bem definida? Alternativa:
     calibrar com as imagens das 10 capturas juntas.
 
-- [ ] **piloto-dados-existentes** — Rodar M1 e M2 nas capturas que já existem
+- [x] **piloto-dados-existentes** — Rodar M1 e M2 nas capturas que já existem
   - Valor: alto · Esforço: P · MVP: sim
   - Depende de: persistencia-captura (export no recálculo), saida-calibracao, metrica-ajuste,
     erro-mapeamento
@@ -173,6 +175,17 @@ Por que esta ordem:
   - Responde se o RMS de ~0,31 px do AprilGrid é viés, comparado ao xadrez. Também diz se o
     fy/fx aparece como viés.
   - **Pode criar uma feature de correção de detecção antes de execucao-a.**
+
+- [ ] **diagnostico-vies-aprilgrid** — Entender o viés das calibrações AprilGrid antes da condição A
+  - Valor: alto · Esforço: M · MVP: sim
+  - Depende de: roteiro-poses, captura-estatica, validacao-cruzada
+  - Origem: o piloto ([`resultado.md`](../specs/piloto-dados-existentes/resultado.md)), aprovado
+    em 2026-11-03.
+    - O AprilGrid tem BR ≈ 0,7 contra 0,3 no xadrez, com fy/fx +0,2–0,3 % e erro concentrado nas
+      bordas.
+    - Já descartados offline: o empeno do alvo, a anisotropia do refino e a seleção de tags.
+  - **Na bancada:** medir a planicidade do alvo; fazer uma captura com o roteiro v1 (inclinações nos
+    dois eixos e alvo girado); fazer uma captura de xadrez com as mesmas poses; comparar BR e fy/fx.
 
 - [ ] **roteiro-poses** — Roteiro fixo de 63 poses com IDs (R2)
   - Valor: alto · Esforço: G · MVP: sim

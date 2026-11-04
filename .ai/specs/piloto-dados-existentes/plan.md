@@ -36,7 +36,7 @@
   Especificação original da etapa:
   - **Pronto quando:** cada uma das seis perguntas tem um número e uma figura de apoio, e cada
     decisão pendente tem uma recomendação justificada.
-- [ ] 6. **Revisão do usuário.**
+- [x] 6. **Revisão do usuário.** As 5 recomendações foram aprovadas pelo usuário em 2026-11-03 e copiadas para a tabela de decisões de [`experimentos/spec.md`](../experimentos/spec.md).
   - **Pronto quando:** as decisões estão aprovadas e copiadas em `experimentos/spec.md`.
 
 ## Riscos
