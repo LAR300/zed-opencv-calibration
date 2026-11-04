@@ -1,6 +1,7 @@
 #include "opencv_calibration.hpp"
 
 #include "capture_support.hpp"
+#include "session_calibration.hpp"
 
 #include <algorithm>
 #include <filesystem>
@@ -13,7 +14,7 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
               bool use_intrinsic_prior, double max_repr_error, bool verbose,
               const AprilGridOptions* aprilgrid,
               const std::vector<std::pair<std::string, std::string>>* image_files,
-              const std::string& output_dir) {
+              const std::string& output_dir, const SessionCalibration* session) {
   std::vector<cv::Mat> left_images, right_images;
 
   /// Read images
@@ -46,6 +47,7 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
     std::cout << "   - Found " << img_count << " images." << std::endl;
   }
 
+  std::vector<int> loaded_index;  // input index of every loaded pair
   for (int i = 0; i < img_count; i++) {
     std::cout << "." << std::flush;
     const std::string left_path =
@@ -72,6 +74,7 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
 
       left_images.push_back(grey_l);
       right_images.push_back(grey_r);
+      loaded_index.push_back(i);
     }
   }
 
@@ -91,6 +94,7 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
 
   std::vector<std::vector<cv::Point3f>> object_points;
   std::vector<std::vector<cv::Point2f>> pts_l, pts_r;
+  std::vector<int> valid_index;  // input index of every valid view
 
   cv::Size t_size(h_edges, v_edges);
 
@@ -116,6 +120,7 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
         pts_l.push_back(pts_l_f);
         pts_r.push_back(pts_r_f);
         object_points.push_back(obj_f);
+        valid_index.push_back(loaded_index[i]);
       } else {
         std::cout << std::endl
                   << "- No valid targets detected on frames #" << i << " ("
@@ -130,6 +135,7 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
     bool found_r = detectCheckerboard(right_images.at(i), t_size, pts_r_f);
 
     if (found_l && found_r) {
+      valid_index.push_back(loaded_index[i]);
       pts_l.push_back(pts_l_f);
       pts_r.push_back(pts_r_f);
       object_points.push_back(pattern_points);
@@ -153,6 +159,10 @@ int calibrate(int img_count, const std::string& folder, StereoCalib& calib_data,
   std::cout << std::endl
             << " * Valid samples: " << pts_l.size() << "/" << img_count
             << std::endl;
+
+  if (session)
+    return calibrateSession(object_points, pts_l, pts_r, valid_index, img_count, imageSize,
+                            calib_data, use_intrinsic_prior, *session, verbose);
 
   auto flags = use_intrinsic_prior ? cv::CALIB_USE_INTRINSIC_GUESS : 0;
   if (use_intrinsic_prior && verbose) {

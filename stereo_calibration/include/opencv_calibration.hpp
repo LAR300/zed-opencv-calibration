@@ -245,4 +245,6 @@ int calibrate(int img_count, const std::string &folder, StereoCalib &raw_data,
               const AprilGridOptions *aprilgrid = nullptr,  // nullptr: checkerboard
               // Image pairs to load instead of <folder>/image_{left,right}_<n>.png
               const std::vector<std::pair<std::string, std::string>> *image_files = nullptr,
-              const std::string &output_dir = "");  // where the calibration is written
+              const std::string &output_dir = "",  // where the calibration is written
+              // Session capture: calibration of saida-calibracao (session_calibration.hpp)
+              const struct SessionCalibration *session = nullptr);

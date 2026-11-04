@@ -154,3 +154,62 @@ TEST(calib_file_compares_raw_parameters) {
   CHECK(!sameRawParameters(a, b, 1e-4, diff));
   CHECK(diff.find("translation") != std::string::npos);
 }
+
+TEST(calib_file_reads_back_what_it_writes) {
+  OpenCVStereoCalibration written, read;
+  std::string error;
+  CHECK(convertRawParameters(zed2iHd720(), false, written, error));
+  const fs::path path = freshFile("calib.yml");
+  CHECK(writeOpenCVCalibration(path.string(), written, true, error));
+  CHECK(readOpenCVCalibration(path.string(), read, error));
+  CHECK(read.image_size == written.image_size);
+  CHECK(!read.fisheye);
+  CHECK(cv::norm(read.K_left, written.K_left) < 1e-12);
+  CHECK(cv::norm(read.D_right, written.D_right) < 1e-12);
+  CHECK(cv::norm(read.T, written.T) < 1e-12);
+  CHECK(cv::norm(read.Rv, written.Rv) < 1e-12);
+}
+
+TEST(calib_file_reads_14_coefficients_and_fisheye) {
+  // The SLAM files have D 1x14 (rational + zeros)
+  const fs::path path = freshFile("calib14.yml");
+  {
+    cv::FileStorage fs(path.string(), cv::FileStorage::WRITE);
+    fs << "Size" << cv::Size(1280, 720);
+    fs << "K_LEFT" << cv::Mat::eye(3, 3, CV_64F) << "K_RIGHT" << cv::Mat::eye(3, 3, CV_64F);
+    cv::Mat D = cv::Mat::zeros(1, 14, CV_64F);
+    D.at<double>(0) = 0.1;
+    fs << "D_LEFT" << D << "D_RIGHT" << D;
+    fs << "R" << cv::Mat::zeros(3, 1, CV_64F) << "T" << (cv::Mat_<double>(3, 1) << -120, 0, 0);
+  }
+  OpenCVStereoCalibration c;
+  std::string error;
+  CHECK(readOpenCVCalibration(path.string(), c, error));
+  CHECK(c.D_left.cols == 8);
+  CHECK_NEAR(c.D_left.at<double>(0), 0.1, 1e-15);
+
+  // Non-zero terms beyond the 8th cannot be dropped silently
+  const fs::path bad = freshFile("calib14_prism.yml");
+  {
+    cv::FileStorage fs(bad.string(), cv::FileStorage::WRITE);
+    fs << "Size" << cv::Size(1280, 720);
+    fs << "K_LEFT" << cv::Mat::eye(3, 3, CV_64F) << "K_RIGHT" << cv::Mat::eye(3, 3, CV_64F);
+    cv::Mat D = cv::Mat::zeros(1, 14, CV_64F);
+    D.at<double>(9) = 0.01;
+    fs << "D_LEFT" << D << "D_RIGHT" << D;
+    fs << "R" << cv::Mat::zeros(3, 1, CV_64F) << "T" << (cv::Mat_<double>(3, 1) << -120, 0, 0);
+  }
+  CHECK(!readOpenCVCalibration(bad.string(), c, error));
+}
+
+TEST(calib_file_read_rejects_missing_keys) {
+  const fs::path path = freshFile("partial.yml");
+  {
+    cv::FileStorage fs(path.string(), cv::FileStorage::WRITE);
+    fs << "Size" << cv::Size(1280, 720);
+  }
+  OpenCVStereoCalibration c;
+  std::string error;
+  CHECK(!readOpenCVCalibration(path.string(), c, error));
+  CHECK(error.find("K_LEFT") != std::string::npos);
+}

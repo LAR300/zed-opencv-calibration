@@ -52,6 +52,11 @@ std::string modelName(const OpenCVStereoCalibration& calib);
 bool writeOpenCVCalibration(const std::string& path, const OpenCVStereoCalibration& calib,
                             bool refuse_existing, std::string& error);
 
+// Read a calibration file: D with 5, 8 or 14 columns (only zeros beyond the
+// 8th) or the fisheye keys D_LEFT_FE/D_RIGHT_FE. Rational D is returned 1x8.
+bool readOpenCVCalibration(const std::string& path, OpenCVStereoCalibration& calib,
+                           std::string& error);
+
 // Every value within 'rel_tol' relative difference (absolute for values near
 // zero). 'diff' names the first value that differs.
 bool sameRawParameters(const RawStereoParameters& a, const RawStereoParameters& b,

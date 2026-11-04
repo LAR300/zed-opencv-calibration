@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <limits>
 #include <memory>
+#include <regex>
 #include <sstream>
 
 #include <unistd.h>
@@ -18,6 +19,7 @@
 #include "opencv_calibration.hpp"
 #include "sample_limits.hpp"
 #include "session.hpp"
+#include "session_calibration.hpp"
 #include "zed_camera_settings.hpp"
 #include "zed_open.hpp"
 
@@ -128,6 +130,8 @@ struct Args {
   std::string camera_settings_file;  // capture settings to apply
   std::string session_file;          // traceable capture mode (--session)
   std::string detections_out;        // detections.json of the stored images
+  std::string recalibrate_dir;       // session capture to calibrate again
+  bool fisheye_given = false;        // --fisheye passed explicitly
 
   void parse(int argc, char* argv[]) {
     app_name = argv[0];
@@ -137,6 +141,7 @@ struct Args {
         svo_path = argv[++i];
       } else if (arg == "--fisheye") {
         is_radtan_lens = false;
+        fisheye_given = true;
       } else if (arg == "--virtual") {
         is_zed_x_one_virtual_stereo = true;
       } else if (arg == "--left_id" && i + 1 < argc) {
@@ -163,6 +168,8 @@ struct Args {
         session_file = argv[++i];
       } else if (arg == "--detections_out" && i + 1 < argc) {
         detections_out = argv[++i];
+      } else if (arg == "--recalibrate" && i + 1 < argc) {
+        recalibrate_dir = argv[++i];
       } else if (arg == "--detector_params" && i + 1 < argc) {
         detector_params_file = argv[++i];
       } else if (arg == "--min_tags" && i + 1 < argc) {
@@ -227,6 +234,11 @@ struct Args {
                      "the detections of the stored images to <file> (detections.json "
                      "format). An existing file is never overwritten."
                   << std::endl;
+        std::cout << "  --recalibrate <dir>    Calibrate again a session capture folder "
+                     "(captura_<XX>), without the camera, with the 'calibration' section "
+                     "of its session.yaml. Requires --target_yaml. Existing results are "
+                     "never overwritten."
+                  << std::endl;
         std::cout << "  --svo <file>      Path to the SVO file." << std::endl;
         std::cout << "  --fisheye         Use fisheye lens model." << std::endl;
         std::cout << "  --virtual         Use ZED X One cameras as a virtual "
@@ -281,6 +293,89 @@ struct Args {
     }
   }
 };
+
+// --recalibrate: the session calibration of an existing capture folder, from
+// its pairs and its session.yaml (.ai/specs/saida-calibracao R9)
+int runRecalibrate(const Args& args, const AprilGridOptions& aprilgrid) {
+  const std::string dir = args.recalibrate_dir;
+  std::string error;
+  Session session;
+  if (!loadSession(dir + "/session.yaml", session, error)) {
+    std::cerr << "Error: " << error << std::endl;
+    return EXIT_FAILURE;
+  }
+  const std::string& model = session.calibration.model;
+  if (args.fisheye_given && model != "fisheye4") {
+    std::cerr << "Error: --fisheye contradicts 'calibration.model: " << model
+              << "' in the session" << std::endl;
+    return EXIT_FAILURE;
+  }
+  for (const std::string& f :
+       {sessionCalibrationFile(dir, model), sessionReportFile(dir, model)}) {
+    if (fs::exists(f)) {
+      std::cerr << "Error: '" << f << "' already exists and is never overwritten" << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+  DetectionsHeader header;
+  std::vector<FrameDetections> frames;
+  if (!readDetections(dir + "/detections.json", header, frames, error)) {
+    std::cerr << "Error: " << error << std::endl;
+    return EXIT_FAILURE;
+  }
+  std::vector<std::pair<std::string, std::string>> pairs;
+  SessionCalibration session_calibration;
+  for (const auto& f : frames) {
+    pairs.emplace_back(dir + "/" + f.file_left, dir + "/" + f.file_right);
+    session_calibration.view_ids.emplace_back(f.pose_id, f.n);
+  }
+  session_calibration.config = session.calibration;
+  session_calibration.output_dir = dir;
+  session_calibration.code_commit = ZEDCAL_GIT_COMMIT;
+  session_calibration.code_dirty = ZEDCAL_GIT_DIRTY != 0;
+
+  StereoCalib calib;
+  calib.initDefault(model == "rational8");
+  bool use_prior = false;
+  int serial = 0;
+  {
+    std::ifstream meta(dir + "/meta.json");
+    std::stringstream text;
+    text << meta.rdbuf();
+    std::smatch m;
+    const std::string content = text.str();
+    if (std::regex_search(content, m, std::regex("\"serial\":\\s*(\\d+)")))
+      serial = std::stoi(m[1]);
+  }
+  if (session.calibration.prior == "factory") {
+    // Without the camera, the factory prior is the exported F, which the SDK
+    // reads back identically (.ai/specs/exportar-fabrica)
+    const std::string f_file = session.output_root + "/fabrica/SN" + std::to_string(serial) +
+                               "/calib_factory_" + model + ".yml";
+    OpenCVStereoCalibration f;
+    if (serial == 0 || !readOpenCVCalibration(f_file, f, error)) {
+      std::cerr << "Error: the factory prior needs " << f_file
+                << " (zed_export_factory): " << error << std::endl;
+      return EXIT_FAILURE;
+    }
+    calib.left.K = f.K_left;
+    calib.left.D = f.D_left;
+    calib.right.K = f.K_right;
+    calib.right.D = f.D_right;
+    calib.T = f.T;
+    calib.Rv = f.Rv;
+    cv::Rodrigues(calib.Rv, calib.R);
+    use_prior = true;
+    std::cout << " * Prior: factory calibration " << f_file << std::endl;
+  } else {
+    std::cout << " * Prior: none (calibration from scratch)" << std::endl;
+  }
+  std::cout << " * Recalibrating " << pairs.size() << " pairs of " << dir << " ("
+            << model << ")" << std::endl;
+  return calibrate(-1, "", calib, h_edges, v_edges, square_size, serial, false, false, false,
+                   use_prior, session.calibration.max_rms_px, verbose, &aprilgrid, &pairs, dir,
+                   &session_calibration);
+}
 
 int main(int argc, char* argv[]) {
   // Allow the ZED SDK to open the camera even if it has no valid calibration
@@ -388,6 +483,22 @@ int main(int argc, char* argv[]) {
                 << std::endl;
   }
 
+  if (!args.recalibrate_dir.empty()) {
+    if (!use_aprilgrid || !args.session_file.empty() || args.use_stored_images ||
+        !args.detections_out.empty()) {
+      std::cerr << "Error: --recalibrate requires --target_yaml and cannot be combined with "
+                   "--session, --use_stored_values or --detections_out."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+    const int err = runRecalibrate(args, aprilgrid);
+    std::cout << std::endl
+              << (err == EXIT_SUCCESS ? " +++++ Calibration successful +++++"
+                                      : " ----- Calibration failed -----")
+              << std::endl;
+    return err;
+  }
+
   // --detections_out: only for the stored images, never over an existing file
   // (.ai/specs/persistencia-captura R10)
   if (!args.detections_out.empty()) {
@@ -443,6 +554,12 @@ int main(int argc, char* argv[]) {
                 << ": " << copy_error.message() << std::endl;
       return EXIT_FAILURE;
     }
+    if (args.fisheye_given && session.calibration.model != "fisheye4") {
+      std::cerr << "Error: --fisheye contradicts 'calibration.model: "
+                << session.calibration.model << "' in the session" << std::endl;
+      return EXIT_FAILURE;
+    }
+    args.is_radtan_lens = session.calibration.model == "rational8";
     std::cout << " * Session: " << args.session_file << std::endl;
     std::cout << "   - Condition: " << session.condition << ", capture "
               << session.capture << ", lens " << session.lens << std::endl;
@@ -465,6 +582,13 @@ int main(int argc, char* argv[]) {
 
   // Session mode: the saved pairs and their detections
   std::vector<std::pair<std::string, std::string>> session_images;
+  SessionCalibration session_calibration;
+  if (use_session) {
+    session_calibration.config = session.calibration;
+    session_calibration.output_dir = capture_dir;
+    session_calibration.code_commit = ZEDCAL_GIT_COMMIT;
+    session_calibration.code_dirty = ZEDCAL_GIT_DIRTY != 0;
+  }
   std::unique_ptr<DetectionsWriter> detections_writer;
 
   // Status variables
@@ -685,6 +809,13 @@ int main(int argc, char* argv[]) {
 
     if (can_use_calib_prior &&
         !calib.setFrom(zed_info.camera_configuration.calibration_parameters_raw)) {
+      can_use_calib_prior = false;
+      calib.initDefault(args.is_radtan_lens);
+    }
+
+    // Session mode: from scratch unless the session asks for the factory prior
+    // (.ai/specs/saida-calibracao R1)
+    if (use_session && session.calibration.prior != "factory" && can_use_calib_prior) {
       can_use_calib_prior = false;
       calib.initDefault(args.is_radtan_lens);
     }
@@ -1181,6 +1312,7 @@ int main(int argc, char* argv[]) {
                 if (!detections_writer->write(capture_dir + "/detections.json", io_error))
                   std::cerr << "  ! " << io_error << std::endl;
                 session_images.emplace_back(path_l, path_r);
+                session_calibration.view_ids.emplace_back(frame.pose_id, frame.n);
                 FrameMeta frame_meta;
                 frame_meta.pose_id = frame.pose_id;
                 frame_meta.n = frame.n;
@@ -1345,7 +1477,8 @@ int main(int argc, char* argv[]) {
                 zed_info.serial_number, is_dual_mono_camera, is_4k_camera,
                 false, can_use_calib_prior, max_repr_error, verbose,
                 use_aprilgrid ? &aprilgrid : nullptr,
-                use_session ? &session_images : nullptr, capture_dir);
+                use_session ? &session_images : nullptr, capture_dir,
+                use_session ? &session_calibration : nullptr);
   if (err == EXIT_SUCCESS)
     std::cout << std::endl
               << " +++++ Calibration successful +++++" << std::endl;

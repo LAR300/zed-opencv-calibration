@@ -1,5 +1,6 @@
 #include "opencv_calib_file.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <sstream>
@@ -105,6 +106,75 @@ bool writeOpenCVCalibration(const std::string& path, const OpenCVStereoCalibrati
     fs << "D_LEFT_FE" << calib.D_left << "D_RIGHT_FE" << calib.D_right;
   fs << "R" << calib.Rv << "T" << calib.T;
   fs.release();
+  return true;
+}
+
+bool readOpenCVCalibration(const std::string& path, OpenCVStereoCalibration& calib,
+                           std::string& error) {
+  error.clear();
+  calib = OpenCVStereoCalibration();
+  cv::FileStorage fs;
+  try {
+    fs.open(path, cv::FileStorage::READ);
+  } catch (const cv::Exception& e) {
+    error = "Cannot parse '" + path + "': " + e.what();
+    return false;
+  }
+  if (!fs.isOpened()) {
+    error = "Cannot open '" + path + "'";
+    return false;
+  }
+  calib.fisheye = !fs["D_LEFT_FE"].empty();
+  const char* d_left = calib.fisheye ? "D_LEFT_FE" : "D_LEFT";
+  const char* d_right = calib.fisheye ? "D_RIGHT_FE" : "D_RIGHT";
+  for (const char* key : {"Size", "K_LEFT", "K_RIGHT", d_left, d_right, "R", "T"}) {
+    if (fs[key].empty()) {
+      error = "'" + path + "' has no '" + key + "'";
+      return false;
+    }
+  }
+  fs["Size"] >> calib.image_size;
+  fs["K_LEFT"] >> calib.K_left;
+  fs["K_RIGHT"] >> calib.K_right;
+  cv::Mat dl, dr;
+  fs[d_left] >> dl;
+  fs[d_right] >> dr;
+  fs["R"] >> calib.Rv;
+  fs["T"] >> calib.T;
+  auto toModel = [&](const cv::Mat& d, cv::Mat& out, const char* key) {
+    cv::Mat flat = d.reshape(1, 1);
+    flat.convertTo(flat, CV_64F);
+    if (calib.fisheye) {
+      if (flat.cols != 4) {
+        error = std::string(key) + " must have 4 coefficients";
+        return false;
+      }
+      out = flat.clone();
+      return true;
+    }
+    if (flat.cols != 5 && flat.cols != 8 && flat.cols != 14) {
+      error = std::string(key) + " must have 5, 8 or 14 coefficients";
+      return false;
+    }
+    for (int i = 8; i < flat.cols; i++)
+      if (flat.at<double>(i) != 0.0) {
+        error = std::string(key) + " has non-zero terms beyond the 8th (thin prism or tilt)";
+        return false;
+      }
+    out = cv::Mat::zeros(1, 8, CV_64F);
+    for (int i = 0; i < std::min(flat.cols, 8); i++) out.at<double>(i) = flat.at<double>(i);
+    return true;
+  };
+  if (!toModel(dl, calib.D_left, d_left) || !toModel(dr, calib.D_right, d_right)) {
+    error = "'" + path + "': " + error;
+    return false;
+  }
+  calib.K_left.convertTo(calib.K_left, CV_64F);
+  calib.K_right.convertTo(calib.K_right, CV_64F);
+  calib.Rv = calib.Rv.reshape(1, 3);
+  calib.T = calib.T.reshape(1, 3);
+  calib.Rv.convertTo(calib.Rv, CV_64F);
+  calib.T.convertTo(calib.T, CV_64F);
   return true;
 }
 

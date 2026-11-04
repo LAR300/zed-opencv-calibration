@@ -50,7 +50,25 @@
 
 ### Fase B — calibração
 
-- [ ] 3a. **`--recalibrate <captura>`** (R9). Ele lê o `session.yaml`, o `meta.json` e o
+- [x] 3a. **`--recalibrate <captura>`** (R9). `runRecalibrate()` no `main.cpp`: lê o
+  `session.yaml`, os pares do `detections.json` e o serial do `meta.json`. Com prior `factory`, usa a
+  F exportada (`readOpenCVCalibration`, testado). Recusa sobrescrever. O fluxo de sessão fica em
+  `stereo_calibration/src/session_calibration.cpp`; `calibrate()` só ganhou o desvio para ele depois
+  da detecção, e a regressão do xadrez continua idêntica.
+
+  **Verificado (2026-11-03),** com as 25 imagens de `2026-11-03_camera_settings` copiadas para
+  `testes_persistencia/recalib_cs/captura_0{1,2}`
+  (`calib_runs/tools/make_session_capture.py`, descartável; a pasta original ficou com o mesmo
+  md5):
+  - **prior `none`:** o YAML é idêntico ao do `--use_stored_values` dessas imagens (diferença
+    relativa 0);
+  - **prior `factory`:** o YAML é idêntico ao da calibração ao vivo gravada em
+    `2026-11-03_camera_settings/zed_calibration_35180697.yml` (diferença 0);
+  - os dois diferem só no RMS da etapa mono (16ª casa): o ajuste estéreo converge para o mesmo
+    ponto. Nesta captura, partir da fábrica não muda o resultado (risco 2 da auditoria);
+  - a segunda execução é recusada.
+
+  Especificação original da etapa: Ele lê o `session.yaml`, o `meta.json` e o
   `detections.json` da captura e chama `calibrate()` com os pares dela. A F exportada, quando o
   prior é `factory`, vem de `readOpenCVCalibration()` (teste de ida e volta com
   `writeOpenCVCalibration`).
