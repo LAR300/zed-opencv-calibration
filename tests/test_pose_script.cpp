@@ -1,0 +1,152 @@
+#include <chrono>
+#include <filesystem>
+#include <fstream>
+#include <map>
+
+#include <opencv2/calib3d.hpp>
+
+#include "pose_script.hpp"
+#include "test_utils.hpp"
+
+namespace fs = std::filesystem;
+
+namespace {
+
+const cv::Size kImage(1280, 720);
+const cv::Size2d kBoard(660.0, 660.0);
+
+cv::Mat K() { return (cv::Mat_<double>(3, 3) << 534, 0, 640, 0, 534, 360, 0, 0, 1); }
+cv::Mat D0() { return cv::Mat::zeros(1, 8, CV_64F); }
+
+cv::Matx33d rotX(double deg) {
+  const double a = deg * CV_PI / 180;
+  return cv::Matx33d(1, 0, 0, 0, std::cos(a), -std::sin(a), 0, std::sin(a), std::cos(a));
+}
+cv::Matx33d rotY(double deg) {
+  const double a = deg * CV_PI / 180;
+  return cv::Matx33d(std::cos(a), 0, std::sin(a), 0, 1, 0, -std::sin(a), 0, std::cos(a));
+}
+cv::Matx33d rotZ(double deg) {
+  const double a = deg * CV_PI / 180;
+  return cv::Matx33d(std::cos(a), -std::sin(a), 0, std::sin(a), std::cos(a), 0, 0, 0, 1);
+}
+
+// Target facing the camera (board X right, Y up), rotated by 'cam' in the camera frame and by
+// 'own' about its own normal, with its centre at 'centre' (mm, camera frame)
+ViewGeometry view(const cv::Matx33d& cam, const cv::Matx33d& own, cv::Vec3d centre) {
+  const cv::Matx33d facing(1, 0, 0, 0, -1, 0, 0, 0, -1);
+  const cv::Matx33d R = cam * facing * own;
+  const cv::Vec3d t = centre - R * cv::Vec3d(330, 330, 0);
+  cv::Vec3d rvec;
+  cv::Rodrigues(R, rvec);
+  return viewGeometry(K(), D0(), kImage, kBoard, rvec, t);
+}
+
+std::string writeTemp(const std::string& content) {
+  static int n = 0;
+  const auto stamp = std::chrono::steady_clock::now().time_since_epoch().count();
+  fs::path p = fs::temp_directory_path() / ("pose_script_" + std::to_string(stamp) + "_" +
+                                            std::to_string(n++) + ".yaml");
+  std::ofstream(p) << content;
+  return p.string();
+}
+
+const char* kPose = "  - {id: B1-P-TL, block: 1, fraction: [0.70, 0.80], center: [0.17, 0.17], "
+                    "tilt_h_deg: 0, tilt_v_deg: 0, rotation_deg: 0}\n";
+
+}  // namespace
+
+TEST(pose_script_v1_has_the_63_poses_of_the_brief) {
+  PoseScript s;
+  std::string error;
+  CHECK(loadPoseScript(std::string(ZEDCAL_SOURCE_DIR) + "/config/roteiro_v1.yaml", s, error));
+  if (!error.empty()) std::cerr << "  " << error << std::endl;
+  CHECK(s.poses.size() == 63);
+  std::map<int, int> per_block;
+  for (const auto& p : s.poses) per_block[p.block]++;
+  CHECK(per_block[1] == 27 && per_block[2] == 20 && per_block[3] == 12 && per_block[4] == 4);
+  for (const auto& p : s.poses) {
+    if (p.block == 2) CHECK(p.fraction_min == 0.40 && std::fabs(p.tilt_h_deg) + std::fabs(p.tilt_v_deg) == 35);
+    if (p.block == 3 || p.block == 4) CHECK(p.fraction_min == 0.70);
+  }
+}
+
+TEST(pose_script_metric_has_9_poses_per_distance) {
+  PoseScript s;
+  std::string error;
+  CHECK(loadPoseScript(std::string(ZEDCAL_SOURCE_DIR) + "/config/roteiro_metrico_v1.yaml", s, error));
+  CHECK(s.poses.size() == 36);
+}
+
+TEST(pose_script_rejects_bad_files) {
+  PoseScript s;
+  std::string error;
+  const std::string head = "name: t\nposes:\n";
+  CHECK(!loadPoseScript(writeTemp(head + kPose + kPose), s, error));        // repeated id
+  CHECK(error.find("repeated") != std::string::npos);
+  std::string bad_id = kPose;
+  bad_id.replace(bad_id.find("B1-P-TL"), 7, "B1_P_TL");
+  CHECK(!loadPoseScript(writeTemp(head + bad_id), s, error));
+  std::string wrong_block = kPose;
+  wrong_block.replace(wrong_block.find("block: 1"), 8, "block: 2");
+  CHECK(!loadPoseScript(writeTemp(head + wrong_block), s, error));
+  CHECK(error.find("block") != std::string::npos);
+  CHECK(!loadPoseScript(writeTemp("name: t\ntolerances: {angle_deg: -1}\nposes:\n" + std::string(kPose)), s, error));
+  std::string bad_rotation = kPose;
+  bad_rotation.replace(bad_rotation.find("rotation_deg: 0"), 15, "rotation_deg: 360");
+  CHECK(!loadPoseScript(writeTemp(head + bad_rotation), s, error));
+  CHECK(loadPoseScript(writeTemp(head + kPose), s, error));
+}
+
+TEST(view_of_a_fronto_parallel_centred_target) {
+  const ViewGeometry v = view(cv::Matx33d::eye(), cv::Matx33d::eye(), {0, 0, 1000});
+  CHECK_NEAR(v.fraction, 660.0 * 534.0 / 1000.0 / 1280.0, 1e-9);
+  CHECK_NEAR(v.center.x, 0.5, 1e-9);
+  CHECK_NEAR(v.center.y, 0.5, 1e-9);
+  CHECK_NEAR(v.tilt_h_deg, 0.0, 1e-9);
+  CHECK_NEAR(v.tilt_v_deg, 0.0, 1e-9);
+  CHECK_NEAR(v.rotation_deg, 0.0, 1e-9);
+  CHECK_NEAR(v.distance_m, 1.0, 1e-9);
+}
+
+TEST(view_tilts_follow_the_convention) {
+  // Rotating about the camera x axis by +20 brings the top edge closer: tilt_h = -20
+  ViewGeometry v = view(rotX(20), cv::Matx33d::eye(), {0, 0, 1000});
+  CHECK_NEAR(v.tilt_h_deg, -20.0, 0.5);
+  CHECK_NEAR(v.tilt_v_deg, 0.0, 0.5);
+  // Rotating about the camera y axis by -30 takes the right edge away: tilt_v = +30
+  v = view(rotY(-30), cv::Matx33d::eye(), {0, 0, 1000});
+  CHECK_NEAR(v.tilt_v_deg, 30.0, 0.5);
+  CHECK_NEAR(v.tilt_h_deg, 0.0, 0.5);
+}
+
+TEST(view_rotation_has_no_quadrant_confusion) {
+  // Turning the target about its own normal by g puts its X axis at -g in the image
+  const double expected[] = {0, 270, 180, 90};
+  for (int k = 0; k < 4; k++) {
+    const ViewGeometry v = view(cv::Matx33d::eye(), rotZ(90.0 * k), {0, 0, 1000});
+    CHECK(angleDifferenceDeg(v.rotation_deg, expected[k]) < 0.5);
+  }
+}
+
+TEST(view_of_a_target_larger_than_the_image) {
+  const ViewGeometry v = view(cv::Matx33d::eye(), cv::Matx33d::eye(), {0, 0, 200});
+  CHECK(v.fraction > 1.0);
+  CHECK_NEAR(v.fraction, 660.0 * 534.0 / 200.0 / 1280.0, 1e-9);
+}
+
+TEST(check_pose_per_quantity) {
+  ScriptPose p;
+  p.fraction_min = 0.25;
+  p.fraction_max = 0.30;
+  p.center = {0.5, 0.5};
+  Tolerances t;
+  ViewGeometry v = view(cv::Matx33d::eye(), cv::Matx33d::eye(), {0, 0, 1000});
+  CHECK(checkPose(v, p, t).all());
+  v = view(rotX(20), cv::Matx33d::eye(), {0, 0, 1000});
+  PoseCheck c = checkPose(v, p, t);
+  CHECK(!c.tilt_h && c.tilt_v && c.rotation && !c.all());
+  p.rotation_deg = 358;
+  v = view(cv::Matx33d::eye(), cv::Matx33d::eye(), {0, 0, 1000});
+  CHECK(checkPose(v, p, t).rotation);  // 0 and 358 are 2 deg apart
+}
