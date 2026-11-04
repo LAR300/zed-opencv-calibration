@@ -33,6 +33,12 @@ O que importa é **quanto a imagem muda**:
   2. desprojeção com A por `undistortPointsIter`, com critério reforçado (configurável; padrão:
      100 iterações e 1e-12);
   3. projeção dos raios com B (`projectPoints`, sem rotação nem translação).
+- **R1b. Região coberta** (acrescentado na implementação, 2026-11-03). Além da imagem inteira, o
+  erro é dado só nos pontos da grade com um canto detectado a até 40 px (configurável).
+  - Fora dessa região, a calibração só extrapola, e o erro mede a extrapolação.
+  - **Medido em dados sintéticos com faixas laterais sem cantos:** na imagem inteira, a
+    referência deu 1,52 px contra 0,83–2,12 px de cada calibração (pior que a melhor); na região
+    coberta, deu 0,144 px contra 0,222–0,726 px (melhor que todas).
 - **R2. Controle da desprojeção.** Cada ponto da grade é reprojetado com A. Os pontos com erro de
   ida e volta acima de 1e-3 px (configurável) são **excluídos e contados**. Isso evita que uma
   desprojeção divergente na borda da lente seja lida como diferença entre A e B.
@@ -80,21 +86,20 @@ O que importa é **quanto a imagem muda**:
 
 ## Critérios de aceitação
 
-- [ ] Calibrações idênticas dão erro 0 (< 1e-9 px) com e sem rotação.
-- [ ] **fx perturbado:** com distorção zero, fx_B = fx_A·(1 + δ), δ = 1e-3, o erro em cada ponto é
-      |x − cx|·δ (|Δ| < 1e-6 px), e o RMS bate com o valor calculado à mão.
-- [ ] **cx deslocado em 1 px:** sem rotação o erro é 1 px em toda a grade.
-      - Com rotação, o RMS cai abaixo do valor sem rotação.
-      - A rotação encontrada é em torno do eixo vertical, com o sinal de atan(1/fx) e a mesma
-        ordem de grandeza.
-      - A compensação não é total: num pinhole, a rotação desloca a borda (1 + x²/f²) vezes mais
-        que o centro.
-- [ ] A desprojeção de um modelo com distorção extrema exclui e conta os pontos da borda que
-      divergem, em vez de reportar erros enormes.
-- [ ] Em 10 calibrações sintéticas com ruído, a referência de R5 fica mais perto do modelo
-      verdadeiro que cada uma das 10.
-- [ ] Nas calibrações reais existentes (v2, acrílico, controles fixos), o módulo produz os mapas e
-      a matriz de pares sem erro.
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-03.
+
+- [x] Calibrações idênticas dão erro 0 (< 1e-9 px) com e sem rotação.
+- [x] **fx perturbado:** com distorção zero e δ = 1e-3, o erro em cada ponto é |x − cx|·δ
+      (|Δ| < 1e-6 px), e o RMS bate com o valor calculado à mão.
+- [x] **cx deslocado em 1 px:** sem rotação o erro é 1 px em toda a grade. Com rotação, o RMS cai,
+      e a rotação é em torno do eixo vertical, na ordem de atan(1/fx).
+- [x] A desprojeção de um modelo com distorção extrema exclui e conta os pontos da borda que
+      divergem.
+- [x] Em 10 calibrações sintéticas com ruído, **na região coberta** (R1b), a referência fica mais
+      perto do modelo verdadeiro que cada uma das 10. Na imagem inteira isso não vale quando há
+      bordas sem dados; daí R1b.
+- [x] Nas calibrações reais existentes (`v2`, acrílico, controles fixos) e em F, o módulo produz os
+      mapas e a matriz de pares. Resultado no plano, etapa 6.
 
 ## Perguntas em aberto
 

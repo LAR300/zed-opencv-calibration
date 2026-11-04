@@ -151,7 +151,7 @@ Por que esta ordem:
   - **Testes:** BR ≈ 0 em dados sintéticos sem viés; BR alto quando a distorção é omitida do
     modelo.
 
-- [ ] **erro-mapeamento** — M2: erro de mapeamento entre calibrações e EME empírico
+- [x] **erro-mapeamento** — M2: erro de mapeamento entre calibrações e EME empírico
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: nucleo-offline
   - **Mapeamento entre duas calibrações:** grade a cada 20 px; desprojeta com A
