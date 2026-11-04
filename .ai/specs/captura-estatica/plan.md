@@ -25,7 +25,17 @@
   Especificação original da etapa:
   - Testes primeiro: valores ausentes usam os padrões; valores ≤ 0 são recusados.
   - **Pronto quando:** `ctest` verde.
-- [ ] 4. **Modo `--measure_static_noise`** (R7). Com o alvo parado, grava N segundos de deslocamento
+- [ ] 4. **Modo `--measure_static_noise <s>`** (R7). **Implementado em 2026-11-04; falta a medida
+  com o alvo.** Só com `--session` (sem `roteiro`, `--timelapse` ou `--svo`); grava
+  `noise.json` na pasta da captura com as distribuições (n, p05, p50, p90, p95, p99, máx.) do
+  deslocamento entre quadros e da nitidez E/D, e os limiares propostos: `max_displacement_px` =
+  p95 do deslocamento (condição de implementação do spec); `min_target_sharpness` = 0,5 × o
+  menor p05 das duas câmeras (proposta minha, a revisar com os dados). Nada é salvo nem
+  calibrado; `end_reason = static noise measured`. `common/capture_io/static_noise.{hpp,cpp}`,
+  testes em `tests/test_static_noise.cpp` (percentis iguais aos do NumPy). Verificado ao vivo
+  sem o alvo: 91 quadros em 6 s, nenhuma proposta, arquivo com nulos.
+
+  Especificação original da etapa: Com o alvo parado, grava N segundos de deslocamento
   e de nitidez em `noise.json`.
   - **Pronto quando:** na bancada, o arquivo existe com percentis, e os limiares padrão de
     `config/session_example.yaml` são atualizados a partir dele.

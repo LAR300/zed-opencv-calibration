@@ -42,8 +42,9 @@
 
 ## captura-estatica
 
-- [ ] **`--measure_static_noise`** (plan, etapa 4): medir com o alvo parado e trocar os limiares
-      provisórios de `config/session_example.yaml` (1,0 s, 0,5 px, nitidez 0) pelos medidos.
+- [ ] **`--measure_static_noise 30`** (plan, etapa 4; implementado): com o alvo parado, nas
+      distâncias P, M e L, e trocar os limiares provisórios de `config/session_example.yaml`
+      (1,0 s, 0,5 px, nitidez 0) pelos propostos no `noise.json`, revistos.
 - [ ] **Integração na coleta com o alvo** (plan, etapa 5): no modo roteiro, o bloqueio do `s`
       até a imobilidade, com os limiares medidos na etapa 4.
 

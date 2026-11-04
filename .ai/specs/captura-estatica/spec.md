@@ -63,16 +63,17 @@ Na bancada o alvo é movido à mão, e é exatamente ele que importa.
 
 ## Critérios de aceitação
 
-- [ ] **Imobilidade, com sequências sintéticas de cantos:**
+- [x] **Imobilidade, com sequências sintéticas de cantos:**
   - parado com ruído σ fica estável depois de T;
   - um deslocamento de 1 px no meio da janela reinicia a contagem;
   - uma tag que some e volta não quebra o cálculo, que usa as comuns em cada par de quadros.
-- [ ] **Nitidez por polígono, com imagens sintéticas:** um alvo borrado sobre um fundo nítido é
+- [x] **Nitidez por polígono, com imagens sintéticas:** um alvo borrado sobre um fundo nítido é
       reprovado, e um alvo nítido sobre um fundo liso é aprovado.
 - [ ] Na bancada, `--measure_static_noise` grava `noise.json`, e os limiares padrão saem dele.
 - [ ] Na bancada, mexer o alvo e apertar `s` não salva; parar por ~1 s e apertar `s` salva o
       último quadro da janela, com os campos de R6 no `meta.json`.
-- [ ] Sem sessão, a regressão do xadrez é idêntica.
+- [x] Sem sessão, a regressão do xadrez é idêntica (2026-11-04, depois do modo roteiro e do
+      `--measure_static_noise`).
 
 ## Perguntas em aberto
 

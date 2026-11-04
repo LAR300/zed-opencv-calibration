@@ -24,6 +24,7 @@
 #include "script_runner.hpp"
 #include "session_calibration.hpp"
 #include "static_capture.hpp"
+#include "static_noise.hpp"
 #include "timelapse.hpp"
 #include "zed_camera_settings.hpp"
 #include "zed_open.hpp"
@@ -154,6 +155,8 @@ struct Args {
   double timelapse_interval_s = 0.0;   // --timelapse: one pair every interval
   double timelapse_duration_min = 0.0; // ... for this long (0: off)
   std::string timelapse_error;         // set when its values are not numbers
+  double static_noise_s = 0.0;         // --measure_static_noise: duration (0: off)
+  std::string static_noise_error;
   bool fisheye_given = false;        // --fisheye passed explicitly
 
   void parse(int argc, char* argv[]) {
@@ -193,6 +196,12 @@ struct Args {
         detections_out = argv[++i];
       } else if (arg == "--recalibrate" && i + 1 < argc) {
         recalibrate_dir = argv[++i];
+      } else if (arg == "--measure_static_noise" && i + 1 < argc) {
+        try {
+          static_noise_s = std::stod(argv[++i]);
+        } catch (const std::exception&) {
+          static_noise_error = "--measure_static_noise expects <seconds>";
+        }
       } else if (arg == "--timelapse" && i + 2 < argc) {
         try {
           timelapse_interval_s = std::stod(argv[++i]);
@@ -273,6 +282,11 @@ struct Args {
                      "pair every interval, without 's', with pose_id 'thermal', for the "
                      "duration, then stop without calibrating (warm-up record, "
                      ".ai/specs/aquecimento-termico). The target must stay still in view."
+                  << std::endl;
+        std::cout << "  --measure_static_noise <s> With --session: with the target still, "
+                     "record for <s> seconds the frame-to-frame corner displacement and the "
+                     "target sharpness to noise.json, with the thresholds they suggest for the "
+                     "'static_capture' section; nothing is saved nor calibrated."
                   << std::endl;
         std::cout << "  --svo <file>      Path to the SVO file." << std::endl;
         std::cout << "  --fisheye         Use fisheye lens model." << std::endl;
@@ -568,6 +582,22 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  // --measure_static_noise (.ai/specs/captura-estatica R7)
+  const bool use_static_noise = args.static_noise_s > 0.0 || !args.static_noise_error.empty();
+  if (use_static_noise) {
+    if (!args.static_noise_error.empty() || args.static_noise_s <= 0.0) {
+      std::cerr << "Error: --measure_static_noise expects a duration in seconds, greater than 0."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (args.session_file.empty() || use_timelapse || !args.svo_path.empty()) {
+      std::cerr << "Error: --measure_static_noise needs --session, and cannot be combined with "
+                   "--timelapse or --svo."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+
   // --svo: images from a recorded file (.ai/specs/higiene-ferramentas R2). A
   // session records what the camera reports during the capture (temperature,
   // uptime, settings), which an SVO does not reproduce.
@@ -846,6 +876,12 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<StabilityTracker> stability;
     OpenCVStereoCalibration pose_calib;
     std::string script_message;  // why the last 's'/'o' did not save
+    if (use_static_noise && session.pose_script) {
+      std::cerr << "Error: --measure_static_noise does not follow a script: remove 'roteiro' "
+                   "from the session."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
     if (use_session && session.pose_script) {
       std::string error;
       PoseScript loaded;
@@ -1040,6 +1076,17 @@ int main(int argc, char* argv[]) {
                 << " pairs), pose_id 'thermal'" << std::endl;
     }
 
+    // --measure_static_noise: every displacement counts, so no threshold
+    std::unique_ptr<StabilityTracker> noise_tracker;
+    StaticNoise static_noise;
+    double noise_start_s = 0.0;
+    if (use_static_noise) {
+      noise_tracker = std::make_unique<StabilityTracker>(1e9, 0.0);
+      noise_start_s = steady_seconds();
+      std::cout << " * Measuring the static noise for " << args.static_noise_s
+                << " s: keep the target still in view of both cameras" << std::endl;
+    }
+
     bool script_done = false;
     while (1) {
       if (key == 'q' || key == 'Q' || key == 27 || interruptRequested()) {
@@ -1140,6 +1187,14 @@ int main(int argc, char* argv[]) {
           cv::Size full_size(camera_resolution.width, camera_resolution.height);
           drawAprilGridDetections(rgb_d_fill, tags_l, full_size);
           drawAprilGridDetections(rgb2_d, tags_r, full_size);
+
+          if (noise_tracker) {
+            const StabilityState st = noise_tracker->update(tags_l, tags_r, steady_seconds());
+            if (!st.indeterminate) static_noise.displacement_px.push_back(st.displacement_px);
+            if (!tags_l.empty()) static_noise.sharpness_left.push_back(targetSharpness(rgb_l, tags_l));
+            if (!tags_r.empty()) static_noise.sharpness_right.push_back(targetSharpness(rgb_r, tags_r));
+            ++static_noise.frames;
+          }
 
           if (script && !script->finished()) {
             // PnP on every left tag, with the guidance calibration (R6, R7)
@@ -1390,6 +1445,15 @@ int main(int argc, char* argv[]) {
           drawBanner(rendering_image, {finish_message}, warn_color);
         }
 
+        if (noise_tracker) {
+          const double left = std::max(0.0, args.static_noise_s - (steady_seconds() - noise_start_s));
+          drawBanner(rendering_image,
+                     {"Measuring the static noise: " + std::to_string(static_cast<int>(left)) +
+                          " s left, " + std::to_string(static_noise.displacement_px.size()) +
+                          " displacements",
+                      "Keep the target still in view of both cameras. 'q': abort"},
+                     info_color);
+        }
         if (timelapse) {
           const double wait = std::max(0.0, timelapse->nextDue() - steady_seconds());
           drawBanner(rendering_image,
@@ -1417,6 +1481,38 @@ int main(int argc, char* argv[]) {
           }
           timelapse_shot = timelapse->due(now);
           if (timelapse_shot) timelapse->taken(now);
+          if (key == 'f' || key == 'F' || key == 's' || key == 'S' || key == ' ') key = -1;
+        }
+
+        // --measure_static_noise: when the time is over, noise.json and exit
+        if (noise_tracker) {
+          const double elapsed = steady_seconds() - noise_start_s;
+          if (elapsed >= args.static_noise_s) {
+            static_noise.duration_s = elapsed;
+            std::string error;
+            const std::string file = capture_dir + "/noise.json";
+            if (!writeStaticNoise(file, static_noise, error)) {
+              std::cerr << "Error: " << error << std::endl;
+              settings_guard.restore();
+              zed_camera.close();
+              return EXIT_FAILURE;
+            }
+            const Distribution d = summarize(static_noise.displacement_px);
+            const ProposedThresholds t = proposeThresholds(static_noise);
+            std::cout << ">>> Static noise: " << static_noise.frames << " frames, " << d.n
+                      << " displacements (p50 " << d.p50 << ", p95 " << d.p95 << " px)" << std::endl;
+            if (t.max_displacement_px && t.min_target_sharpness)
+              std::cout << "    proposed static_capture: max_displacement_px "
+                        << *t.max_displacement_px << ", min_target_sharpness "
+                        << *t.min_target_sharpness << std::endl;
+            else
+              std::cout << "    no proposal: the target was not seen by both cameras" << std::endl;
+            std::cout << "    written to " << file << std::endl;
+            end_meta("static noise measured");
+            settings_guard.restore();
+            zed_camera.close();
+            return EXIT_SUCCESS;
+          }
           if (key == 'f' || key == 'F' || key == 's' || key == 'S' || key == ' ') key = -1;
         }
 
