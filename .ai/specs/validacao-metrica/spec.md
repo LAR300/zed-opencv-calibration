@@ -69,8 +69,10 @@ Shortis (2015) recomenda validar com comprimentos conhecidos em várias distânc
 
 ## Critérios de aceitação
 
-- [ ] `config/roteiro_metrico_v1.yaml` tem 36 poses, e um teste confere ids e contagens.
-- [ ] **Dados sintéticos** com distâncias conhecidas e d0 = 25 mm: a análise recupera d0 com erro
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-03.
+
+- [x] `config/roteiro_metrico_v1.yaml` tem 36 poses, e um teste confere ids e contagens.
+- [x] **Dados sintéticos** com distâncias conhecidas e d0 = 25 mm: a análise recupera d0 com erro
       < 1 mm. Um baseline 1 % maior gera resíduo proporcional à distância.
 - [ ] Na bancada, uma sessão métrica completa registra as distâncias medidas e as medidas do alvo
       no `meta.json` e na sessão.

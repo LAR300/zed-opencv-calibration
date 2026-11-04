@@ -31,11 +31,32 @@
   espaçamentos e a planicidade, validados.
   - Testes primeiro: valores ausentes ou negativos são recusados.
   - **Pronto quando:** `ctest` verde.
-- [ ] 4. **Análise** (R5). `python3 -m zedcal.metric_test --config ...`: (a) erro métrico,
-  (b) distância com o ajuste de d0, (c) erro epipolar, por distância.
+- [x] 4. **Análise** (R5). `zedcal/metric_test.py` (`analyse`) e
+  `python3 -m zedcal.metric_test_command --config ...`. Testes em `tests/test_metric_test.py`.
+  - **(b), convenção:** a distância triangulada é a perpendicular do centro óptico esquerdo ao
+    plano ajustado aos cantos; medida = Z_plano − d0, d0 = média de Z_plano − medida. Também um
+    ajuste de dois parâmetros (escala e d0), informativo.
+  - **Formato da distância medida no `meta.json`** (definido aqui; a gravação é a etapa 2):
+    `frames[k].measured_distance = {value_mm, instrument, reference_point, uncertainty_mm}`. Sem
+    ela, a config aceita `measured_distances_mm` por rótulo de distância (cm).
+  - **Alvo medido:** a média de `tag_sides_mm` e de `spacings_mm` da sessão, quando existem.
+  - **Ruído, simulado** (9 vistas por distância, calibração verdadeira):
+
+    | σ dos cantos | d0 recuperado (verdade 25) | Escala ajustada | DP por vista a 3 m | Vão no centro a 3 m (média / RMS) |
+    |---|---:|---:|---:|---:|
+    | 0,1 px | 23,6 mm | −0,18 % | 5,5 mm | +0,18 % / 0,41 % |
+    | 0,2 px | 18,7 mm | −0,83 % | 27,8 mm | +0,53 % / 1,07 % |
+
+    O σ dos cantos AprilGrid medido no piloto é ~0,12 px (M1). Com ele, o teste resolve a
+    escala a ~0,2 %, abaixo da margem proposta de 0,5 ponto. O passo (b) a 3 m é inútil por vista
+    (RMS 5–17 %); o vão (c) é o número a usar longe.
+
+  Especificação original da etapa: `python3 -m zedcal.metric_test --config ...`: (a) erro
+  métrico, (b) distância com o ajuste de d0, (c) erro epipolar, por distância.
   - Testes primeiro: o caso sintético de d0 = 25 mm e o do baseline 1 % maior.
   - **Pronto quando:** `pytest` verde.
-- [ ] 5. **Relatório** (R6).
+- [ ] 5. **Relatório** (R6). `report.md`, `metric_test.json` e `metric_test.png` por sessão,
+  uma seção por calibração. Gerado em dado sintético; falta a sessão de bancada real.
   - **Pronto quando:** numa sessão de bancada real, o relatório é gerado para F e para uma
     calibração existente.
 

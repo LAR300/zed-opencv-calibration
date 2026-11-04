@@ -128,9 +128,12 @@ class Evaluation:
     metric: Dict[str, List[np.ndarray]] = field(default_factory=lambda: {s: [] for s in METRIC_SETS})
     metric_points: Dict[str, List[np.ndarray]] = field(default_factory=lambda: {s: [] for s in METRIC_SETS})
     metric_distance: Dict[str, List[np.ndarray]] = field(default_factory=lambda: {s: [] for s in METRIC_SETS})
+    metric_view: Dict[str, List[int]] = field(default_factory=lambda: {s: [] for s in METRIC_SETS})
     plane_rms_mm: List[float] = field(default_factory=list)
     plane_max_mm: List[float] = field(default_factory=list)
     depth_mm: List[np.ndarray] = field(default_factory=list)      # per view, Z of every corner
+    points_3d: List[np.ndarray] = field(default_factory=list)     # per view, left camera frame, mm
+    frame_index: List[int] = field(default_factory=list)          # per view, into det.frames
     rect: Optional[Rectification] = None
 
 
@@ -141,7 +144,7 @@ def evaluate(calib, det: io.Detections, target: Optional[Target] = None, alpha: 
     cam_l, cam_r = left_camera(calib), right_camera(calib)
     rect = rectify(calib, alpha)
     ev = Evaluation(rect=rect)
-    for f in det.frames:
+    for k, f in enumerate(det.frames):
         try:
             _, img_l, img_r, ids = io.common_correspondences(f, det.target)
         except ValueError:
@@ -158,6 +161,8 @@ def evaluate(calib, det: io.Detections, target: Optional[Target] = None, alpha: 
         ev.left_points.append(np.asarray(img_l, np.float64))
         ev.view_distance_mm.append(dist)
         ev.depth_mm.append(X[:, 2])
+        ev.points_3d.append(X)
+        ev.frame_index.append(k)
         for s, prs in metric_pairs(obj, ids, target).items():
             if not prs:
                 continue
@@ -167,6 +172,7 @@ def evaluate(calib, det: io.Detections, target: Optional[Target] = None, alpha: 
             ev.metric[s].append(100.0 * (meas - true) / true)
             ev.metric_points[s].append((img_l[i] + img_l[j]) / 2.0)
             ev.metric_distance[s].append(np.full(len(prs), dist))
+            ev.metric_view[s].append(len(ev.epipolar) - 1)
         res = plane_residual(X)
         ev.plane_rms_mm.append(float(np.sqrt(np.mean(res ** 2))))
         ev.plane_max_mm.append(float(np.max(np.abs(res))))
@@ -178,12 +184,16 @@ def evaluate(calib, det: io.Detections, target: Optional[Target] = None, alpha: 
 def merge(evs: Sequence[Evaluation]) -> Evaluation:
     """The views of several captures pooled, for a calibration evaluated on all of them."""
     out = Evaluation(rect=evs[0].rect)
+    offset = 0
     for ev in evs:
-        for name in ("epipolar", "left_points", "view_distance_mm", "plane_rms_mm", "plane_max_mm", "depth_mm"):
+        for name in ("epipolar", "left_points", "view_distance_mm", "plane_rms_mm", "plane_max_mm", "depth_mm",
+                     "points_3d"):
             getattr(out, name).extend(getattr(ev, name))
-        for d in ("metric", "metric_points", "metric_distance"):
-            for s in METRIC_SETS:
+        for s in METRIC_SETS:
+            for d in ("metric", "metric_points", "metric_distance"):
                 getattr(out, d)[s].extend(getattr(ev, d)[s])
+            out.metric_view[s].extend(v + offset for v in ev.metric_view[s])
+        offset += len(ev.epipolar)
     return out
 
 

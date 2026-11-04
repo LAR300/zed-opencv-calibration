@@ -49,3 +49,14 @@
 
 - [ ] **Rever N depois da primeira captura completa com roteiro** (plan, risco). O N foi escolhido
       a partir de capturas que não seguiram o roteiro.
+
+## validacao-metrica
+
+- [ ] **Distância medida na coleta** (plan, etapa 2): ao trocar de distância, pedir o valor, o
+      instrumento, o ponto de referência e a incerteza, e gravar em
+      `frames[k].measured_distance` (formato no plan, etapa 4). Chamar
+      `checkMetricTargetMeasured` ao abrir a sessão métrica.
+- [ ] **Sessão métrica real** (plan, etapa 5): rodar `zedcal.metric_test_command` com F e uma
+      calibração existente.
+- [ ] **Perguntas do spec ao usuário:** instrumento e ponto de referência da distância, distância
+      mínima, instrumento da planicidade.
