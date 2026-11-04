@@ -246,7 +246,7 @@ Por que esta ordem:
   - Compara a diagonal da matriz com o resto. F entra como mais uma linha.
   - **Teste:** com i = j, reproduz o RMS de treino.
 
-- [ ] **metricas-tarefa** — M4: erro epipolar, erro métrico e resíduo de plano
+- [x] **metricas-tarefa** — M4: erro epipolar, erro métrico e resíduo de plano
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: nucleo-offline
   - Três medidas:

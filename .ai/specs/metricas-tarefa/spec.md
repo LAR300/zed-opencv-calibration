@@ -49,6 +49,17 @@ diretamente:
   - por calibração, cx_E − cx_D das matrizes P1 e P2;
   - entre duas calibrações, a diferença desse valor (Δd, em px) e o ΔZ/Z correspondente a 0,5,
     1, 2 e 3 m, pela fórmula do Contexto.
+  - **Decisão de implementação (2026-11-03, tomada sem o usuário; rever):** a diferença de cx de
+    P1/P2 **não mede o viés de disparidade.** Sem `CALIB_ZERO_DISPARITY`, o `stereoRectify`
+    escolhe o cx de cada câmera para enquadrar a imagem retificada, e isso depende também da
+    distorção. Num par sintético, 0,5 px a mais no cx_D original muda a diferença de cx em
+    0,735 px, mas a profundidade triangulada muda como 0,494 px de disparidade (0,5 · f_ret/f).
+    Por isso o R5 reporta as duas coisas:
+    - **Δd efetivo (principal):** com os mesmos cantos observados, d = f·B/Z, então
+      Δd = f_A·B_A·(1/Z_B − 1/Z_A) por canto (mediana, p10, p90), e o ΔZ/Z nas distâncias de
+      referência pela fórmula do Contexto. Também uma reta d_B = a·d_A + b, que separa escala
+      (a) de viés (b); com a faixa estreita de disparidades das capturas, a e b ficam correlacionados.
+    - **Diferença de cx de P1/P2:** só informativa, como o brief pede.
 - **R6. Avaliação:** cada calibração (as da condição, a média e F) avaliada nas mesmas capturas de
   validação: capturas de outra repetição e o teste métrico
   ([`validacao-metrica`](../validacao-metrica/spec.md)). As capturas de validação ficam na config.
@@ -71,17 +82,20 @@ diretamente:
 
 ## Critérios de aceitação
 
-- [ ] **Dados sintéticos com a calibração verdadeira** e sem ruído:
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-03.
+
+- [x] **Dados sintéticos com a calibração verdadeira** e sem ruído:
   - erro epipolar < 1e-6 px;
   - erro métrico < 1e-6 %;
   - resíduo de plano < 1e-6 mm.
-- [ ] **Uma rotação de 0,05° em torno do eixo óptico** imposta entre as câmeras na calibração
+- [x] **Uma rotação de 0,05° em torno do eixo óptico** imposta entre as câmeras na calibração
       avaliada produz um erro epipolar que cresce com a distância ao centro da imagem, com o
       sinal certo.
-- [ ] **O baseline 1 % errado** na calibração avaliada dá erro métrico ≈ 1 % em (b) e (c).
-- [ ] **Δd conhecido:** duas calibrações que diferem só em cx_D por 0,5 px dão Δd = 0,5 px em R5,
-      e o ΔZ/Z bate com a fórmula.
-- [ ] Nas capturas AprilGrid existentes, com F e com as calibrações existentes, os mapas e as
+- [x] **O baseline 1 % errado** na calibração avaliada dá erro métrico ≈ 1 % em (b) e (c).
+- [x] **Δd conhecido:** duas calibrações que diferem só em cx_D por 0,5 px dão Δd efetivo =
+      0,5 · f_ret/f px (até 1 %), e o ΔZ/Z bate com a fórmula. Critério reescrito pela decisão de
+      R5: a diferença de cx de P1/P2 muda 0,735 px nesse caso.
+- [x] Nas capturas AprilGrid existentes, com F e com as calibrações existentes, os mapas e as
       tabelas são gerados.
 
 ## Perguntas em aberto
