@@ -34,6 +34,10 @@ rodadas, em `ros2_ws/dev/calib_runs/<data>_<o_que>/`, fora deste repositório.
   `calib_runs/dados/<condicao>/captura_<XX>/`, e uma pasta já usada é recusada antes de abrir a
   câmera: troque o número da captura no arquivo de sessão. Testes ficam fora de `dados/`, em
   `calib_runs/testes_persistencia/`.
+- **Calibração de fábrica (F):** `zed_export_factory --output_root <dados> --verify
+  --expect_resolution 1280x720` grava `dados/fabrica/SN<serial>/`. Rode uma vez por câmera; a câmera
+  do robô tem outro serial e outra F. A distorção que o SDK entrega é a do modelo racional, a seção
+  `[LEFT_DISTO]`/`[RIGHT_DISTO]` do `.conf`, e não o k1/k2 de `[LEFT_CAM_HD]`.
 - **Exportar as detecções de uma captura antiga** sem tocar na pasta original: numa pasta de
   trabalho, faça um link `zed-images` para o `zed-images/` original e rode
   `--use_stored_values --detections_out detections.json` ali. O YAML do recálculo é gravado na
@@ -61,3 +65,6 @@ rodadas, em `ros2_ws/dev/calib_runs/<data>_<o_que>/`, fora deste repositório.
   novo, rode `cmake ..` antes do `make`, senão o link falha com "undefined reference".
 - **Testes unitários:** `cmake -S tests -B build/unit_tests && make -C build/unit_tests &&
   build/unit_tests/aprilgrid_tests`, no container, como `admin`.
+- **Erros do checker sem janela:** `calib_runs/tools/checker_errors <target.yaml> <quadros>
+  [calib.yml|internal] [pasta_zed-images/]` calcula os mesmos erros do `zed_stereo_checker`
+  (esquerda, direita, estéreo), ao vivo ou nos pares gravados, e imprime a mediana e o IQR.

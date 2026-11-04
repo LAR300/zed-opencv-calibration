@@ -55,11 +55,25 @@
   Especificação original da etapa: `--verify` reabre com `optional_opencv_calibration_file` e compara.
   - **Pronto quando:** a verificação passa na S/N 35180697. Uma cópia do YAML com fx alterado em 1 %
     faz a verificação falhar, como prova de que ela detecta divergência.
-- [ ] 4. **Checker com F** (critério 3). Com a câmera parada diante do alvo, rodar o checker com a
+- [x] 4. **Checker com F** (critério 3), com o critério ajustado pelo usuário em 2026-11-03: em
+  casa, sem o alvo, a comparação foi feita nos pares gravados, e não ao vivo.
+  - `calib_runs/tools/checker_errors` (descartável) calcula os erros do `zed_stereo_checker` com a
+    calibração que o SDK carrega: a interna, ou o arquivo F via `optional_opencv_calibration_file`.
+  - Nos 25 pares de `2026-11-03_camera_settings`, a diferença por par entre as duas foi
+    **0,0 px**. Medianas com F: esquerda 0,324 px, direita 0,313 px, estéreo 0,421 px.
+  - Isso é coerente com a etapa 3: o SDK devolve os mesmos parâmetros, e o checker calcula a partir
+    deles.
+  - **Pendência de bancada:** repetir ao vivo com o alvo, com o checker de verdade, na próxima
+    sessão no laboratório.
+
+  Especificação original da etapa: Com a câmera parada diante do alvo, rodar o checker com a
   calibração interna e depois com o YAML exportado, e registrar os erros no `capture.log` da pasta.
   - **Pronto quando:** os erros medianos de 30 quadros diferem menos que a dispersão quadro a
     quadro.
-- [ ] 5. **Documentação** no README e em `.ai/docs/bench.md`.
+- [x] 5. **Documentação.** Seção "Factory Calibration Export" no `README.md`; `.ai/docs/bench.md`
+  com o uso, a origem da distorção e o `checker_errors`.
+
+  Especificação original da etapa:
   - **Pronto quando:** a seção explica onde F fica e por que ela não é a "verdade".
 
 ## Riscos

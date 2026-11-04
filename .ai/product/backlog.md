@@ -101,7 +101,7 @@ Por que esta ordem:
     Assim as capturas antigas de `calib_runs/` entram nas métricas com o mesmo detector C++.
   - **Sem a flag nova, o fluxo e o `zed-images/` continuam como hoje.**
 
-- [ ] **exportar-fabrica** — Calibração de fábrica "F" no formato OpenCV (R5)
+- [x] **exportar-fabrica** — Calibração de fábrica "F" no formato OpenCV (R5)
   - Valor: alto · Esforço: P · MVP: sim
   - Depende de: auditoria
   - Exporta `calibration_parameters_raw` do SDK, com a autocalibração desligada e na mesma

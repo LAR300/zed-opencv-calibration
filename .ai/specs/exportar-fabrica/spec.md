@@ -67,15 +67,18 @@ métricas (M1–M4, R6). Hoje F só é lida dentro das ferramentas, como chute i
 
 ## Critérios de aceitação
 
-- [ ] `zed_export_factory` grava `calib_factory_rational8.yml` para a S/N 35180697, com fx L 533,82
+> Validação: ver as etapas de [`plan.md`](plan.md), com o registro de bancada de 2026-11-03.
+
+- [x] `zed_export_factory` grava `calib_factory_rational8.yml` para a S/N 35180697, com fx L 533,82
       e baseline 119,982 mm em HD720, conforme `SN35180697.conf` `[LEFT_CAM_HD]` e `[STEREO]`.
-- [ ] `--verify` passa: os parâmetros relidos pelo SDK a partir do arquivo coincidem até 1e-4
-      relativo.
-- [ ] O `zed_stereo_checker --calib_opencv calib_factory_rational8.yml` mostra, numa mesma cena
-      parada, os mesmos erros que o checker com a calibração interna, a menos do ruído entre
-      quadros.
-- [ ] Uma segunda execução para a mesma câmera é recusada; a primeira saída fica intacta.
-- [ ] `meta.json` tem serial, firmware, versão do SDK, resolução e commit.
+- [x] `--verify` passa. Uma cópia com fx 1 % maior falha, o que prova que a verificação detecta
+      divergência.
+- [x] O checker com o arquivo F dá os mesmos erros que com a calibração interna: diferença de 0,0 px
+      por par nos 25 pares gravados de `2026-11-03_camera_settings`.
+      - Critério ajustado pelo usuário: a comparação foi feita nos pares gravados, sem o alvo. A
+        repetição ao vivo fica como pendência de bancada.
+- [x] Uma segunda execução para a mesma câmera é recusada; a primeira saída fica intacta.
+- [x] `meta.json` tem serial, firmware, versão do SDK, resolução e commit.
 
 ## Perguntas em aberto
 
