@@ -62,11 +62,16 @@ O brief pede M1 como **filtro, não validação**:
     parâmetros livres: intrínsecos + 6 por vista;
   - alvos virtuais por tag (AprilGrid) ou por quadrado 2×2 exclusivo (xadrez), com os intrínsecos
     da calibração avaliada fixos;
-  - σ̂_d² = 4·(1,4826·MAD)², com o MAD sobre os resíduos com sinal, x e y juntos, de todos os alvos
-    virtuais;
-  - MSE_calib **robusto**, pelo mesmo estimador (1,4826·MAD dos resíduos com sinal)², e também na
-    forma comum. O BR usa o robusto nos dois lados (armadilha 3). A forma comum fica no relatório,
-    para comparar.
+  - σ̂_d² = 4 × MSE robusto dos resíduos com sinal, x e y juntos, de todos os alvos virtuais;
+  - MSE_calib **robusto**, pelo mesmo estimador, e também na forma comum. O BR usa o robusto nos
+    dois lados (armadilha 3). A forma comum fica no relatório, para comparar;
+  - **MSE robusto** = média quadrática depois de descartar |r − mediana| > 5 σ_MAD.
+    - **Desvio da fórmula do brief,** decidido na implementação (2026-11-03). O (1,4826·MAD)² saiu
+      **4 % baixo** nos alvos virtuais: os 4 cantos de uma tag têm alavancagens diferentes na pose,
+      os resíduos têm variâncias diferentes, e o MAD dessa mistura fica abaixo da média quadrática
+      que o fator 4 supõe.
+    - Em dados sintéticos sem viés, isso deu BR = 0,08, em vez de ≈ 0. A média aparada deu σ̂_d
+      a 0,5 % e continua robusta a outliers grosseiros.
 - **R4. Saída do BR:** BR, √BR, ε_bias (px), σ̂_d (px), MSE_calib (robusto e comum), N, N_P e o
   número de alvos virtuais usados e descartados.
 - **R5. Alvos virtuais descartados.** Uma tag cuja pose não converge ou cujo resíduo é

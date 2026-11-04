@@ -9,7 +9,13 @@
 
 ## Etapas
 
-- [ ] 1. **Estimadores** (R3). `robust_sigma(residuals)` = 1,4826·MAD dos componentes com sinal;
+- [x] 1. **Estimadores** (R3). `zedcal/m1.py`: `robust_sigma` (1,4826·MAD), `robust_mse` (média
+  quadrática aparada em 5 σ_MAD, ver o spec R3), `mse_plain` e `dof_factor`.
+  - Testes: com 5 % de outliers grosseiros, o `robust_mse` muda < 3 % e o comum explode.
+  - O MAD sozinho muda ~6 % com essa contaminação: o limite de 3 % do plano original valia para o
+    estimador, não para o MAD.
+
+  Especificação original da etapa: `robust_sigma(residuals)` = 1,4826·MAD dos componentes com sinal;
   `mse_plain`; `dof_factor(N, N_P)`.
   - Testes primeiro: com uma gaussiana de σ = 0,2 e 10⁵ amostras, `robust_sigma` = 0,2 ± 1 %; com
     5 % de outliers de 5 px, o estimador robusto muda < 3 % e o comum muda muito.
@@ -18,12 +24,28 @@
   - Testes primeiro: dados sintéticos sem ruído dão ≈ 0; com σ, o RMS por canto fica ≈ σ√2; o
     filtro reprova acima do limiar.
   - **Pronto quando:** `pytest` verde.
-- [ ] 3. **Alvos virtuais e σ_d** (R3, R5). Pose por tag com `IPPE_SQUARE` + LM e a menor das duas
+- [x] 3. **Alvos virtuais e σ_d** (R3, R5). `virtual_target_residuals`: cada tag com a sua
+  pose (IPPE + LM, intrínsecos fixos); no xadrez, quadrados 2×2 exclusivos. Falhas são descartadas
+  e contadas.
+  - Sem viés: σ̂_d a menos de 10 % de 0,1 px (medido: 0,5 % com o estimador aparado), e nenhum alvo
+    virtual descartado.
+
+  Especificação original da etapa: Pose por tag com `IPPE_SQUARE` + LM e a menor das duas
   soluções; quadrados 2×2 exclusivos no xadrez; descarte contado.
   - Testes primeiro: em dados sintéticos com σ = 0,1, σ̂_d fica a menos de 10 %; uma tag com os
     cantos trocados de ordem é descartada e contada.
   - **Pronto quando:** `pytest` verde.
-- [ ] 4. **Bias Ratio** (R3, R4).
+- [x] 4. **Bias Ratio** (R3, R4). `bias_ratio`: BR, √BR, ε_bias, σ̂_d, MSE robusto e comum, N, N_P,
+  alvos virtuais usados e descartados. Os quatro casos sintéticos passam (tests/test_m1.py, 9
+  testes):
+  - sem viés, BR < 0,05;
+  - distorção omitida (k1 = −0,30 ajustado sem distorção), BR > 0,5;
+  - alvo com flecha de 1 mm, BR maior que sem viés;
+  - RMS² do OpenCV como MSE por coordenada, BR ≈ 0,5.
+
+  A decomposição fecha.
+
+  Especificação original da etapa:
   - Testes primeiro:
     - os quatro casos sintéticos dos critérios de aceitação: sem viés, distorção omitida, alvo não
       plano e convenção errada;
