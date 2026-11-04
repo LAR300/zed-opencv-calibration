@@ -429,3 +429,19 @@ TEST(session_reads_the_metric_target_measurements) {
   CHECK(!checkMetricTargetMeasured(s.target_measured, error));
   CHECK(contains(error, "3x3"));
 }
+
+TEST(session_reads_the_script_keys) {
+  Session s;
+  std::string error;
+  CHECK(load(join(kBaseLines), s, error));
+  CHECK(!s.pose_script && !s.pose_calibration);  // absent: free capture
+  CHECK(load(join(kBaseLines) + "roteiro: /abs/roteiro_v1.yaml\npose_calibration: null\n", s,
+             error));
+  CHECK(s.pose_script && *s.pose_script == "/abs/roteiro_v1.yaml");
+  CHECK(!s.pose_calibration);
+  // relative to the session file's folder (the temporary directory here)
+  CHECK(load(join(kBaseLines) + "roteiro: sub/../r.yaml\n", s, error));
+  CHECK(s.pose_script && *s.pose_script == (fs::temp_directory_path() / "r.yaml").string());
+  CHECK(!load(join(kBaseLines) + "roteiro: 3\n", s, error));
+  CHECK(contains(error, "'roteiro'"));
+}

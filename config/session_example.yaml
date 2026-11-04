@@ -51,3 +51,8 @@ static_capture:                  # optional (spec captura-estatica); PROVISIONAL
   max_displacement_px: 0.5       # RMS corner motion between frames counted as "still";
                                  # set from noise.json (--measure_static_noise) on the bench
   min_target_sharpness: 0        # Laplacian variance on the tags; 0 = not checked until measured
+
+# Script mode (roteiro-poses R5, R7); null or absent = free capture. Relative paths are
+# taken from this file's folder.
+roteiro: null                    # e.g. roteiro_v1.yaml
+pose_calibration: null           # PnP guidance only; null = <output_root>/fabrica/SN<serial>/calib_factory_rational8.yml

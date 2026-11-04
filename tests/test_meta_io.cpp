@@ -143,6 +143,49 @@ TEST(meta_copies_the_metric_target_measurements) {
   CHECK(contains(text, "\"spacings_mm\": [\n"));
 }
 
+TEST(meta_writes_the_script_mode_records) {
+  CaptureMeta m = sampleMeta();
+  m.frames.push_back(sampleFrame());
+  const fs::path free_path = freshFile("meta.json");
+  std::string error;
+  CHECK(writeCaptureMeta(free_path.string(), m, error));
+  const std::string free_text = readAll(free_path);
+  CHECK(contains(free_text, "\"script\": null"));
+  CHECK(contains(free_text, "\"pose\": null"));
+  CHECK(contains(free_text, "\"out_of_tolerance\": null"));
+  CHECK(contains(free_text, "\"still\": null"));
+  CHECK(contains(free_text, "\"roteiro\": null"));
+
+  FrameMeta f = sampleFrame();
+  PoseMeasurement p;
+  p.fraction = 0.5;
+  p.tilt_h_deg = 35.0;
+  p.in_tolerance = true;
+  f.pose = p;
+  f.out_of_tolerance = false;
+  StillMeta st;
+  st.window_s = 1.0;
+  st.threshold_window_s = 1.0;
+  f.still = st;
+  m.frames = {f};
+  ScriptMeta script;
+  script.name = "roteiro_v1";
+  script.file = "/abs/roteiro_v1.yaml";
+  script.events = {{"B1-P-TL", "saved", 0}, {"B1-P-TC", "skipped", std::nullopt}};
+  m.script = script;
+  m.session.pose_script = "/abs/roteiro_v1.yaml";
+  const fs::path path = freshFile("meta.json");
+  CHECK(writeCaptureMeta(path.string(), m, error));
+  const std::string text = readAll(path);
+  CHECK(contains(text, "\"in_tolerance\": true"));
+  CHECK(contains(text, "\"out_of_tolerance\": false"));
+  CHECK(contains(text, "\"action\": \"skipped\""));
+  CHECK(contains(text, "\"n\": null"));
+  CHECK(contains(text, "\"roteiro\": \"/abs/roteiro_v1.yaml\""));
+  CHECK(contains(text, "\"min_target_sharpness\""));
+  CHECK(!contains(text, "__ZEDCAL_"));
+}
+
 TEST(meta_keeps_the_full_timestamp) {
   // A 64-bit nanosecond timestamp does not fit a double: it is written as text
   CaptureMeta m = sampleMeta();

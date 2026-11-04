@@ -76,6 +76,10 @@ struct Session {
   Medium medium;
   CalibrationConfig calibration;
   StaticCaptureConfig static_capture;
+  // Script mode (.ai/specs/roteiro-poses R5, R7); optional keys, absent = free
+  // capture. Relative paths are taken from the session file's folder.
+  std::optional<std::string> pose_script;       // key 'roteiro'
+  std::optional<std::string> pose_calibration;  // PnP guidance; null = the exported F
 };
 
 // Read and validate a session file. Every field must be present; unknown

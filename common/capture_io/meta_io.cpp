@@ -72,6 +72,8 @@ void writeSession(cv::FileStorage& fs, const Session& s) {
   fs << "static_capture" << "{" << "window_s" << s.static_capture.window_s
      << "max_displacement_px" << s.static_capture.max_displacement_px << "min_target_sharpness"
      << s.static_capture.min_target_sharpness << "}";
+  writeOptionalText(fs, "roteiro", s.pose_script);
+  writeOptionalText(fs, "pose_calibration", s.pose_calibration);
   fs << "}";
 }
 
@@ -87,6 +89,13 @@ bool anyTextUsesMarker(const CaptureMeta& m) {
   if (s.port.material && usesMarker(*s.port.material)) return true;
   for (const auto& f : m.frames)
     if (usesMarker(f.pose_id)) return true;
+  if (m.script) {
+    if (usesMarker(m.script->name) || usesMarker(m.script->file)) return true;
+    for (const auto& e : m.script->events)
+      if (usesMarker(e.pose_id)) return true;
+  }
+  if (s.pose_script && usesMarker(*s.pose_script)) return true;
+  if (s.pose_calibration && usesMarker(*s.pose_calibration)) return true;
   return false;
 }
 
@@ -127,6 +136,21 @@ bool writeCaptureMeta(const std::string& path, const CaptureMeta& m, std::string
     fs << "}";
     fs << "started_utc" << m.started_utc << "ended_utc" << m.ended_utc << "end_reason"
        << m.end_reason;
+    if (m.script) {
+      fs << "script" << "{" << "name" << m.script->name << "file" << m.script->file << "events"
+         << "[";
+      for (const auto& e : m.script->events) {
+        fs << "{" << "pose_id" << e.pose_id << "action" << e.action;
+        if (e.n)
+          fs << "n" << *e.n;
+        else
+          fs << "n" << kNull;
+        fs << "}";
+      }
+      fs << "]" << "}";
+    } else {
+      fs << "script" << kNull;
+    }
 
     fs << "frames" << "[";
     for (const auto& f : m.frames) {
@@ -139,7 +163,32 @@ bool writeCaptureMeta(const std::string& path, const CaptureMeta& m, std::string
       writeOptional(fs, "onboard_left", f.temperature_onboard_left);
       writeOptional(fs, "onboard_right", f.temperature_onboard_right);
       writeOptional(fs, "imu", f.temperature_imu);
-      fs << "}" << "}";
+      fs << "}";
+      if (f.pose) {
+        const PoseMeasurement& p = *f.pose;
+        fs << "pose" << "{" << "fraction" << p.fraction << "center" << "[" << p.center_x
+           << p.center_y << "]" << "tilt_h_deg" << p.tilt_h_deg << "tilt_v_deg" << p.tilt_v_deg
+           << "rotation_deg" << p.rotation_deg << "distance_m" << p.distance_m;
+        writeBool(fs, "in_tolerance", p.in_tolerance);
+        fs << "}";
+      } else {
+        fs << "pose" << kNull;
+      }
+      if (f.out_of_tolerance)
+        writeBool(fs, "out_of_tolerance", *f.out_of_tolerance);
+      else
+        fs << "out_of_tolerance" << kNull;
+      if (f.still) {
+        const StillMeta& st = *f.still;
+        fs << "still" << "{" << "max_displacement_px" << st.max_displacement_px << "window_s"
+           << st.window_s << "sharpness_left" << st.sharpness_left << "sharpness_right"
+           << st.sharpness_right << "thresholds" << "{" << "max_displacement_px"
+           << st.threshold_displacement_px << "window_s" << st.threshold_window_s
+           << "min_target_sharpness" << st.threshold_sharpness << "}" << "}";
+      } else {
+        fs << "still" << kNull;
+      }
+      fs << "}";
     }
     fs << "]";
     text = fs.releaseAndGetString();

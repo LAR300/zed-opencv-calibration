@@ -155,6 +155,8 @@ medium:
   water_temperature_c: null
   salinity_psu: null
   refractive_index: null
+roteiro: null                    # opcional: modo roteiro (roteiro-poses R5)
+pose_calibration: null           # opcional: calibração do PnP de orientação; null = F
 ```
 
 **`detections.json`.** Uma entrada por par salvo:

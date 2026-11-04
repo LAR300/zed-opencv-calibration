@@ -26,6 +26,23 @@ struct CameraMeta {
   std::string lens;
 };
 
+// Script mode: the quantities measured on the saved frame (roteiro-poses R6, R7)
+struct PoseMeasurement {
+  double fraction = 0.0;
+  double center_x = 0.0, center_y = 0.0;  // normalised
+  double tilt_h_deg = 0.0, tilt_v_deg = 0.0, rotation_deg = 0.0;
+  double distance_m = 0.0;
+  bool in_tolerance = false;
+};
+
+// Static capture: the still window that ended with the saved frame (captura-estatica R6)
+struct StillMeta {
+  double max_displacement_px = 0.0;  // largest frame-to-frame displacement in the window
+  double window_s = 0.0;
+  double sharpness_left = 0.0, sharpness_right = 0.0;  // target region
+  double threshold_displacement_px = 0.0, threshold_window_s = 0.0, threshold_sharpness = 0.0;
+};
+
 struct FrameMeta {
   std::string pose_id;
   int n = 0;
@@ -35,6 +52,21 @@ struct FrameMeta {
   std::optional<double> temperature_onboard_left;
   std::optional<double> temperature_onboard_right;
   std::optional<double> temperature_imu;
+  std::optional<PoseMeasurement> pose;   // script mode only
+  std::optional<bool> out_of_tolerance;  // script mode only: saved with 'o'
+  std::optional<StillMeta> still;        // static capture only
+};
+
+// Script mode: the pose script and every operator action (roteiro-poses R10, R11)
+struct ScriptEventMeta {
+  std::string pose_id;
+  std::string action;     // saved | out_of_tolerance | skipped | back
+  std::optional<int> n;   // the pair, for the saving actions
+};
+struct ScriptMeta {
+  std::string name;
+  std::string file;
+  std::vector<ScriptEventMeta> events;
 };
 
 struct CaptureMeta {
@@ -51,6 +83,7 @@ struct CaptureMeta {
   std::string started_utc;
   std::string ended_utc;
   std::string end_reason;
+  std::optional<ScriptMeta> script;  // null in a free capture
   std::vector<FrameMeta> frames;
 };
 

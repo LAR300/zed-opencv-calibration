@@ -338,6 +338,21 @@ bool loadSession(const std::string& path, Session& session, std::string& error) 
     number("min_target_sharpness", c.min_target_sharpness, 0.0, false);
   }
 
+  // Optional script mode keys (roteiro-poses R5, R7)
+  auto optionalPath = [&](const char* key, std::optional<std::string>& out) {
+    const cv::FileNode n = fs[key];
+    if (!error.empty() || n.empty() || isNull(n)) return;
+    if (!n.isString() || n.string().empty()) {
+      error = std::string("Field '") + key + "' must be a file path or null";
+      return;
+    }
+    std::filesystem::path p = n.string();
+    if (p.is_relative()) p = std::filesystem::path(path).parent_path() / p;
+    out = p.lexically_normal().string();
+  };
+  optionalPath("roteiro", session.pose_script);
+  optionalPath("pose_calibration", session.pose_calibration);
+
   if (!error.empty()) {
     error += " in '" + path + "'";
     session = Session();
