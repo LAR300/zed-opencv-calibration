@@ -19,6 +19,11 @@ target_measured:                 # caliper, before the session (brief R7)
   tag_spacing_mm: 26.4
   planarity_mm: null             # largest deviation from a plane, mm
   measured_on: "2026-11-03"
+  # metric test session only (spec validacao-metrica R4); optional elsewhere
+  tag_sides_mm: null             # list: at least 6 tags, edges and centre
+  spacings_mm: null              # list: at least 6 pairs of neighbouring tags
+  board_side_mm: null            # whole grid, outer edge to outer edge
+  planarity_grid_mm: null        # list: 9 signed deviations, 3x3 grid, row-major
 
 port:                            # flat port in front of the camera (brief R8); null in air
   present: false

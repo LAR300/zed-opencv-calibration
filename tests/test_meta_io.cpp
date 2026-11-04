@@ -123,6 +123,26 @@ TEST(meta_copies_the_session_with_nulls) {
   CHECK(contains(text, "\"water_temperature_c\": null"));
 }
 
+TEST(meta_copies_the_metric_target_measurements) {
+  CaptureMeta m = sampleMeta();
+  const fs::path empty = freshFile("meta.json");
+  std::string error;
+  CHECK(writeCaptureMeta(empty.string(), m, error));
+  CHECK(contains(readAll(empty), "\"board_side_mm\": null"));
+  m.session.target_measured.tag_sides_mm = {88.02, 87.98};
+  m.session.target_measured.board_side_mm = 660.1;
+  m.session.target_measured.planarity_grid_mm = {0.0, -0.1};
+  const fs::path path = freshFile("meta.json");
+  CHECK(writeCaptureMeta(path.string(), m, error));
+  const std::string text = readAll(path);
+  // FileStorage writes doubles as %.17g: 8.8019999999999996e+01
+  CHECK(contains(text, "\"tag_sides_mm\": [\n"));
+  CHECK(contains(text, "8.80199999"));
+  CHECK(contains(text, "\"board_side_mm\": 6.6010000"));
+  CHECK(contains(text, "-1.0000000"));
+  CHECK(contains(text, "\"spacings_mm\": [\n"));
+}
+
 TEST(meta_keeps_the_full_timestamp) {
   // A 64-bit nanosecond timestamp does not fit a double: it is written as text
   CaptureMeta m = sampleMeta();

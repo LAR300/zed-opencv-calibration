@@ -2,6 +2,7 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <regex>
 
 #include <opencv2/calib3d.hpp>
 
@@ -76,6 +77,25 @@ TEST(pose_script_metric_has_9_poses_per_distance) {
   std::string error;
   CHECK(loadPoseScript(std::string(ZEDCAL_SOURCE_DIR) + "/config/roteiro_metrico_v1.yaml", s, error));
   CHECK(s.poses.size() == 36);
+  // MET-<cm>-<position>-<n>: per distance 5 at the centre (MC-1..5) and one at
+  // each edge (ML, MR, TC, BC), frontal
+  const std::regex id("MET-(50|100|200|300)-(MC|ML|MR|TC|BC)-([1-5])");
+  std::map<std::string, int> per_distance, centre;
+  for (const auto& p : s.poses) {
+    std::smatch m;
+    CHECK(std::regex_match(p.id, m, id));
+    if (m.empty()) continue;
+    per_distance[m[1]]++;
+    if (m[2] == "MC") centre[m[1]]++;
+    else CHECK(m[3] == "1");
+    CHECK(p.tilt_h_deg == 0.0 && p.tilt_v_deg == 0.0);
+  }
+  CHECK(per_distance.size() == 4);
+  for (const auto& [d, n] : per_distance) {
+    CHECK(n == 9);
+    CHECK(centre[d] == 5);
+  }
+  CHECK_NEAR(s.tolerances.angle_deg, 2.0, 1e-12);
 }
 
 TEST(pose_script_rejects_bad_files) {

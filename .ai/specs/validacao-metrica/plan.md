@@ -10,13 +10,24 @@
 
 ## Etapas
 
-- [ ] 1. **Roteiro métrico** (R2).
+- [x] 1. **Roteiro métrico** (R2). O arquivo veio do gerador de `roteiro-poses` (etapa 2).
+  `pose_script_metric_has_9_poses_per_distance` confere 36 poses, 9 por distância (5 `MC` e uma
+  em cada borda), os ids `MET-<cm>-<posição>-<n>`, as poses frontais e a tolerância de 2°.
+
+  Especificação original da etapa:
   - Testes primeiro: 36 poses, 9 por distância, ids no formato.
   - **Pronto quando:** `ctest` verde.
 - [ ] 2. **Distância medida na coleta** (R3). Ao trocar de distância, a ferramenta pede o valor, o
   instrumento e a incerteza, e grava no `meta.json`.
   - **Pronto quando:** numa sessão de teste, os 9 pares de uma distância trazem o valor informado.
-- [ ] 3. **Medidas do alvo na sessão** (R4). Campos de `target_measured` para as tags, os
+- [x] 3. **Medidas do alvo na sessão** (R4). `target_measured` ganhou `tag_sides_mm`,
+  `spacings_mm`, `board_side_mm` e `planarity_grid_mm`, opcionais no arquivo (ausente = null,
+  para não quebrar as sessões existentes) e copiados no `meta.json`. Valores ≤ 0 nas listas de
+  medidas são recusados na leitura. `checkMetricTargetMeasured` exige o conjunto completo
+  (≥ 6 tags, ≥ 6 espaços, o lado, a grade 3×3, a planicidade e a data); a coleta métrica
+  (etapa 2, na bancada) deve chamá-la ao abrir a sessão. 164/164 testes C++.
+
+  Especificação original da etapa: Campos de `target_measured` para as tags, os
   espaçamentos e a planicidade, validados.
   - Testes primeiro: valores ausentes ou negativos são recusados.
   - **Pronto quando:** `ctest` verde.

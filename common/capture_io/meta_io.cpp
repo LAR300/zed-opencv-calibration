@@ -42,6 +42,15 @@ void writeSession(cv::FileStorage& fs, const Session& s) {
   writeOptional(fs, "tag_spacing_mm", s.target_measured.tag_spacing_mm);
   writeOptional(fs, "planarity_mm", s.target_measured.planarity_mm);
   writeOptionalText(fs, "measured_on", s.target_measured.measured_on);
+  auto list = [&](const char* key, const std::vector<double>& values) {
+    fs << key << "[";
+    for (double v : values) fs << v;
+    fs << "]";
+  };
+  list("tag_sides_mm", s.target_measured.tag_sides_mm);
+  list("spacings_mm", s.target_measured.spacings_mm);
+  writeOptional(fs, "board_side_mm", s.target_measured.board_side_mm);
+  list("planarity_grid_mm", s.target_measured.planarity_grid_mm);
   fs << "}";
   fs << "port" << "{";
   writeBool(fs, "present", s.port.present);

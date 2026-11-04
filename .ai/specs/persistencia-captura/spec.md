@@ -138,6 +138,11 @@ target_measured:                 # paquímetro, antes da sessão (R7 do brief)
   tag_spacing_mm: 26.4
   planarity_mm: null             # maior desvio do plano medido
   measured_on: 2026-11-03
+  # opcionais (ausente = null); obrigatórios na sessão métrica (validacao-metrica R4)
+  tag_sides_mm: null             # lista: lados de >= 6 tags
+  spacings_mm: null              # lista: espaços de >= 6 pares de tags vizinhas
+  board_side_mm: null            # lado total da grade
+  planarity_grid_mm: null        # lista: 9 desvios com sinal, grade 3x3, por linha
 port:                            # R8 do brief; null no ar sem porta
   present: false
   material: null                 # ex.: PMMA

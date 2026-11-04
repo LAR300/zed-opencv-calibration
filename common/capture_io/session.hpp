@@ -7,14 +7,25 @@
 
 #include <optional>
 #include <string>
+#include <vector>
 
-// Target dimensions measured with a caliper before the session (brief R7)
+// Target dimensions measured with a caliper before the session (brief R7).
+// The lists and board_side_mm are optional in the file (absent = empty/null);
+// the metric test requires them (checkMetricTargetMeasured).
 struct TargetMeasured {
   std::optional<double> tag_size_mm;
   std::optional<double> tag_spacing_mm;
   std::optional<double> planarity_mm;  // largest deviation from a plane
   std::optional<std::string> measured_on;
+  std::vector<double> tag_sides_mm;       // individual tag sides (edges and centre)
+  std::vector<double> spacings_mm;        // gaps between pairs of neighbouring tags
+  std::optional<double> board_side_mm;    // whole grid, outer tag edge to outer tag edge
+  std::vector<double> planarity_grid_mm;  // signed deviations at a 3x3 grid, row-major
 };
+
+// Metric test session (spec validacao-metrica R4): at least 6 tag sides and 6
+// spacings, the board side, the 3x3 planarity grid and the summary values.
+bool checkMetricTargetMeasured(const TargetMeasured& t, std::string& error);
 
 // Flat port in front of the camera (brief R8); all null in air without a port
 struct PortGeometry {

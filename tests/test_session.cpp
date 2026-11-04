@@ -387,3 +387,45 @@ TEST(session_static_capture_defaults_and_values) {
   CHECK(contains(error, "static_capture.window_s"));
   CHECK(!load(join(kBaseLines) + "static_capture:\n  min_target_sharpness: -1\n", s, error));
 }
+
+TEST(session_reads_the_metric_target_measurements) {
+  Session s;
+  std::string error;
+  CHECK(load(join(kBaseLines), s, error));  // absent: empty lists, null side
+  CHECK(s.target_measured.tag_sides_mm.empty() && !s.target_measured.board_side_mm);
+  CHECK(!checkMetricTargetMeasured(s.target_measured, error));
+  CHECK(contains(error, "tag_sides_mm"));
+  const std::string full =
+      withLine("  planarity_mm:", "  planarity_mm: 0.4") +
+      "  tag_sides_mm: [88.02, 87.98, 88.0, 88.05, 87.97, 88.01]\n"
+      "  spacings_mm: [26.4, 26.38, 26.42, 26.41, 26.39, 26.4]\n"
+      "  board_side_mm: 660.1\n"
+      "  planarity_grid_mm: [0, 0.1, 0, 0.2, 0.4, 0.1, 0, -0.1, 0]\n";
+  // the extra lines must stay inside target_measured: put them right after it
+  std::string inside = full;
+  const std::string anchor = "  measured_on: \"2026-11-03\"\n";
+  const std::string extra = full.substr(full.find("  tag_sides_mm"));
+  inside = full.substr(0, full.find("  tag_sides_mm"));
+  inside.replace(inside.find(anchor), anchor.size(), anchor + extra);
+  CHECK(load(inside, s, error));
+  CHECK(s.target_measured.tag_sides_mm.size() == 6);
+  CHECK_NEAR(s.target_measured.spacings_mm[1], 26.38, 1e-12);
+  CHECK_NEAR(*s.target_measured.board_side_mm, 660.1, 1e-12);
+  CHECK(s.target_measured.planarity_grid_mm.size() == 9);
+  CHECK(checkMetricTargetMeasured(s.target_measured, error));
+
+  std::string five = inside;
+  five.replace(five.find(", 88.01]"), 8, "]");
+  CHECK(load(five, s, error));
+  CHECK(!checkMetricTargetMeasured(s.target_measured, error));
+  CHECK(contains(error, "at least 6 tags"));
+  std::string negative = inside;
+  negative.replace(negative.find("[26.4,"), 6, "[-26.4,");
+  CHECK(!load(negative, s, error));
+  CHECK(contains(error, "target_measured.spacings_mm"));
+  std::string grid8 = inside;
+  grid8.replace(grid8.find(", -0.1, 0]"), 10, ", -0.1]");
+  CHECK(load(grid8, s, error));
+  CHECK(!checkMetricTargetMeasured(s.target_measured, error));
+  CHECK(contains(error, "3x3"));
+}

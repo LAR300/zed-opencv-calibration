@@ -218,6 +218,39 @@ bool loadSession(const std::string& path, Session& session, std::string& error) 
   t.tag_spacing_mm = target.optionalNumber("tag_spacing_mm", 0.0, true);
   t.planarity_mm = target.optionalNumber("planarity_mm", 0.0);
   t.measured_on = target.optionalText("measured_on");
+  if (error.empty()) {
+    const cv::FileNode tn = fs["target_measured"];
+    auto list = [&](const char* key, std::vector<double>& out, bool positive) {
+      const cv::FileNode n = tn[key];
+      if (!error.empty() || n.empty() || isNull(n)) return;
+      const std::string name = std::string("target_measured.") + key;
+      if (!n.isSeq()) {
+        error = "Field '" + name + "' must be a list of numbers or null";
+        return;
+      }
+      for (const auto& v : n) {
+        if (!v.isInt() && !v.isReal()) {
+          error = "Field '" + name + "' must be a list of numbers or null";
+          return;
+        }
+        if (positive && v.real() <= 0.0) {
+          error = "Field '" + name + "' must hold values greater than 0";
+          return;
+        }
+        out.push_back(v.real());
+      }
+    };
+    list("tag_sides_mm", t.tag_sides_mm, true);
+    list("spacings_mm", t.spacings_mm, true);
+    list("planarity_grid_mm", t.planarity_grid_mm, false);
+    const cv::FileNode side = tn["board_side_mm"];
+    if (error.empty() && !side.empty() && !isNull(side)) {
+      if ((!side.isInt() && !side.isReal()) || side.real() <= 0.0)
+        error = "Field 'target_measured.board_side_mm' must be a number greater than 0 or null";
+      else
+        t.board_side_mm = side.real();
+    }
+  }
 
   Reader port = root.section("port");
   auto& p = session.port;
@@ -310,6 +343,28 @@ bool loadSession(const std::string& path, Session& session, std::string& error) 
     session = Session();
     return false;
   }
+  return true;
+}
+
+bool checkMetricTargetMeasured(const TargetMeasured& t, std::string& error) {
+  auto fail = [&](const std::string& message) {
+    error = "Metric test session: " + message;
+    return false;
+  };
+  if (!t.tag_size_mm || !t.tag_spacing_mm)
+    return fail("target_measured.tag_size_mm and tag_spacing_mm are required");
+  if (t.tag_sides_mm.size() < 6)
+    return fail("target_measured.tag_sides_mm needs at least 6 tags (edges and centre), has " +
+                std::to_string(t.tag_sides_mm.size()));
+  if (t.spacings_mm.size() < 6)
+    return fail("target_measured.spacings_mm needs at least 6 pairs of tags, has " +
+                std::to_string(t.spacings_mm.size()));
+  if (!t.board_side_mm) return fail("target_measured.board_side_mm is required");
+  if (t.planarity_grid_mm.size() != 9)
+    return fail("target_measured.planarity_grid_mm needs the 9 points of a 3x3 grid, has " +
+                std::to_string(t.planarity_grid_mm.size()));
+  if (!t.planarity_mm) return fail("target_measured.planarity_mm is required");
+  if (!t.measured_on) return fail("target_measured.measured_on is required");
   return true;
 }
 
