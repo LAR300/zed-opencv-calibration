@@ -239,6 +239,50 @@ bool loadSession(const std::string& path, Session& session, std::string& error) 
   m.salinity_psu = medium.optionalNumber("salinity_psu", 0.0);
   m.refractive_index = medium.optionalNumber("refractive_index", 1.0);
 
+  // Optional section; each field keeps its default when absent
+  cv::FileNode calib = fs["calibration"];
+  if (error.empty() && !calib.empty() && !calib.isNone()) {
+    auto& c = session.calibration;
+    auto number = [&](const char* key, double& value, double min, bool strict) {
+      cv::FileNode n = calib[key];
+      if (!error.empty() || n.empty() || n.isNone()) return;
+      if (!n.isInt() && !n.isReal()) {
+        error = std::string("Field 'calibration.") + key + "' must be a number";
+        return;
+      }
+      const double v = n.real();
+      if (strict ? v <= min : v < min) {
+        std::ostringstream ss;
+        ss << "Field 'calibration." << key << "' (" << v << ") must be "
+           << (strict ? "greater than " : "at least ") << min;
+        error = ss.str();
+        return;
+      }
+      value = v;
+    };
+    auto choice = [&](const char* key, std::string& value,
+                      std::initializer_list<const char*> allowed) {
+      cv::FileNode n = calib[key];
+      if (!error.empty() || n.empty() || n.isNone()) return;
+      const std::string v = n.isString() ? n.string() : "";
+      for (const char* a : allowed)
+        if (v == a) {
+          value = v;
+          return;
+        }
+      std::string list;
+      for (const char* a : allowed) list += (list.empty() ? "" : ", ") + std::string(a);
+      error = std::string("Field 'calibration.") + key + "' ('" + v + "') must be one of: " +
+              list;
+    };
+    if (!calib.isMap()) error = "Field 'calibration' must be a section with its own fields";
+    choice("model", c.model, {"rational8", "fisheye4"});
+    number("max_rms_px", c.max_rms_px, 0.0, true);
+    number("outlier_factor", c.outlier_factor, 1.0, true);
+    number("outlier_floor_px", c.outlier_floor_px, 0.0, true);
+    choice("prior", c.prior, {"none", "factory"});
+  }
+
   if (!error.empty()) {
     error += " in '" + path + "'";
     session = Session();

@@ -22,7 +22,12 @@
   - Testes primeiro: duas vistas com o mesmo número de cantos dão a média quadrática; vistas com
     pesos diferentes dão o valor feito à mão; `msePerCoordinate(0,5) = 0,125`.
   - **Pronto quando:** `ctest` verde.
-- [ ] 2. **Seção `calibration` da sessão** (R2). Ela é lida e validada no `loadSession` de
+- [x] 2. **Seção `calibration` da sessão** (R2). `CalibrationConfig` em `session.hpp`. A seção é
+  opcional, e cada campo ausente fica com o padrão (rational8; 0,5 px; 2,5; 0,5 px; prior `none`).
+  Ela vai também para a cópia da sessão no `meta.json` e para o `config/session_example.yaml`.
+  Testes em `test_session.cpp` e `test_meta_io.cpp` (138/138).
+
+  Especificação original da etapa: Ela é lida e validada no `loadSession` de
   `capture_io`: `model` em {`rational8`, `fisheye4`}, `max_rms_px > 0`, `outlier_factor > 1`,
   `outlier_floor_px > 0`, `prior` em {`none`, `factory`}. Seção ausente usa os padrões.
   - Testes primeiro: sem a seção, os padrões; cada valor inválido é recusado.

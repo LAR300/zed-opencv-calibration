@@ -33,3 +33,10 @@ medium:
   water_temperature_c: null
   salinity_psu: null
   refractive_index: null         # >= 1
+
+calibration:                     # optional; these are the defaults (spec saida-calibracao)
+  model: rational8               # rational8 | fisheye4
+  max_rms_px: 0.5                # acceptance: per-corner RMS of each camera and of the stereo fit
+  outlier_factor: 2.5            # a view is removed above max(factor * median, floor)
+  outlier_floor_px: 0.5
+  prior: none                    # none: from scratch | factory: start from the factory calibration

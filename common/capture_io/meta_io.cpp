@@ -63,7 +63,12 @@ void writeSession(cv::FileStorage& fs, const Session& s) {
   writeOptional(fs, "water_temperature_c", s.medium.water_temperature_c);
   writeOptional(fs, "salinity_psu", s.medium.salinity_psu);
   writeOptional(fs, "refractive_index", s.medium.refractive_index);
-  fs << "}" << "}";
+  fs << "}";
+  fs << "calibration" << "{" << "model" << s.calibration.model << "max_rms_px"
+     << s.calibration.max_rms_px << "outlier_factor" << s.calibration.outlier_factor
+     << "outlier_floor_px" << s.calibration.outlier_floor_px << "prior"
+     << s.calibration.prior << "}";
+  fs << "}";
 }
 
 void replaceAll(std::string& text, const std::string& from, const std::string& to) {

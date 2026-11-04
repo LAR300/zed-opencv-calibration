@@ -186,3 +186,15 @@ TEST(meta_without_session_writes_null) {
   CHECK(contains(text, "\"session\": null"));
   CHECK(!contains(text, "\"condition\""));
 }
+
+TEST(meta_copies_the_calibration_section) {
+  CaptureMeta m = sampleMeta();
+  m.session.calibration.prior = "factory";
+  const fs::path path = freshFile("meta.json");
+  std::string error;
+  CHECK(writeCaptureMeta(path.string(), m, error));
+  const std::string text = readAll(path);
+  CHECK(contains(text, "\"calibration\""));
+  CHECK(contains(text, "\"prior\": \"factory\""));
+  CHECK(contains(text, "\"model\": \"rational8\""));
+}

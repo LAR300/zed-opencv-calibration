@@ -34,6 +34,17 @@ struct Medium {
   std::optional<double> refractive_index;
 };
 
+// How zed_stereo_calibration calibrates a session capture. Optional section:
+// the defaults reproduce the tool without --session.
+// Spec: .ai/specs/saida-calibracao/spec.md (R1, R2)
+struct CalibrationConfig {
+  std::string model = "rational8";  // rational8 | fisheye4
+  double max_rms_px = 0.5;          // acceptance, per-corner RMS
+  double outlier_factor = 2.5;      // per-view rejection: max(factor * median, floor)
+  double outlier_floor_px = 0.5;
+  std::string prior = "none";       // none | factory
+};
+
 struct Session {
   std::string output_root;
   std::string condition;  // [A-Za-z0-9_-]+
@@ -43,6 +54,7 @@ struct Session {
   TargetMeasured target_measured;
   PortGeometry port;
   Medium medium;
+  CalibrationConfig calibration;
 };
 
 // Read and validate a session file. Every field must be present; unknown

@@ -320,3 +320,53 @@ TEST(session_ignores_trailing_comments) {
   CHECK(s.condition == "A_ar");
   CHECK(s.note == "a # b");  // a '#' inside quotes is kept
 }
+
+TEST(session_calibration_section_defaults_reproduce_the_tool) {
+  Session s;
+  std::string error;
+  CHECK(load(join(kBaseLines), s, error));
+  CHECK(s.calibration.model == "rational8");
+  CHECK_NEAR(s.calibration.max_rms_px, 0.5, 1e-12);
+  CHECK_NEAR(s.calibration.outlier_factor, 2.5, 1e-12);
+  CHECK_NEAR(s.calibration.outlier_floor_px, 0.5, 1e-12);
+  CHECK(s.calibration.prior == "none");
+}
+
+TEST(session_calibration_section_is_read) {
+  Session s;
+  std::string error;
+  CHECK(load(join(kBaseLines) +
+                 "calibration:\n  model: fisheye4\n  max_rms_px: 0.4\n  outlier_factor: 3\n"
+                 "  outlier_floor_px: 0.6\n  prior: factory\n",
+             s, error));
+  if (!error.empty()) std::cerr << "  " << error << std::endl;
+  CHECK(s.calibration.model == "fisheye4");
+  CHECK_NEAR(s.calibration.max_rms_px, 0.4, 1e-12);
+  CHECK_NEAR(s.calibration.outlier_factor, 3.0, 1e-12);
+  CHECK_NEAR(s.calibration.outlier_floor_px, 0.6, 1e-12);
+  CHECK(s.calibration.prior == "factory");
+}
+
+TEST(session_calibration_fields_missing_keep_their_default) {
+  Session s;
+  std::string error;
+  CHECK(load(join(kBaseLines) + "calibration:\n  prior: factory\n", s, error));
+  CHECK(s.calibration.prior == "factory");
+  CHECK(s.calibration.model == "rational8");
+}
+
+TEST(session_calibration_rejects_invalid_values) {
+  const std::vector<std::pair<std::string, std::string>> bad = {
+      {"  model: radtan5\n", "calibration.model"},
+      {"  max_rms_px: 0\n", "calibration.max_rms_px"},
+      {"  outlier_factor: 1\n", "calibration.outlier_factor"},
+      {"  outlier_floor_px: -0.1\n", "calibration.outlier_floor_px"},
+      {"  prior: maybe\n", "calibration.prior"},
+  };
+  for (const auto& [line, name] : bad) {
+    Session s;
+    std::string error;
+    CHECK(!load(join(kBaseLines) + "calibration:\n" + line, s, error));
+    CHECK(contains(error, name));
+  }
+}
