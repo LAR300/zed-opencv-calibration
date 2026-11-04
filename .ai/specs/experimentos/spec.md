@@ -139,6 +139,18 @@
 - **R11. Registro das decisões.** As decisões do piloto e da bancada são registradas neste spec
   (seção abaixo) antes da primeira captura de A: variante de calibração, N, X, margens, α e k.
 
+## Notas das análises offline (2026-11-03, para a revisão do usuário)
+
+- **O portão B provavelmente falha no erro métrico.** No piloto (M4, `metricas-tarefa` etapa 6),
+  as calibrações sem acrílico medem o passo do alvo +0,8 a +1,0 % maior na captura com acrílico, e a
+  calibração com acrílico mede −0,8 % nas capturas sem ele. Com a margem proposta de ±0,5 ponto
+  percentual, o TOST não declararia equivalência. É uma captura de cada lado, sem roteiro; as 10
+  capturas de A e B dizem o resto.
+- **"O Levene/F não aponta B mais disperso" é uma condição fraca com n = 10.** Um DP dobrado é
+  detectado 64 % das vezes pelo F e 31 % pelo Brown–Forsythe (`analise-estatistica`, plano,
+  etapa 5). Não rejeitar não mostra que as dispersões são iguais. O relatório deve mostrar a razão
+  dos DPs com o seu IC, e não só o p.
+
 ## Decisões a registrar antes de A
 
 | Decisão | Origem | Valor |
