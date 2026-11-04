@@ -549,6 +549,23 @@ int main(int argc, char* argv[]) {
     }
   }
 
+  // --svo: images from a recorded file (.ai/specs/higiene-ferramentas R2). A
+  // session records what the camera reports during the capture (temperature,
+  // uptime, settings), which an SVO does not reproduce.
+  if (!args.svo_path.empty()) {
+    if (!args.session_file.empty() || !args.camera_settings_file.empty() || use_timelapse) {
+      std::cerr << "Error: --svo cannot be combined with --session, --timelapse or "
+                   "--camera_settings: they describe a live camera."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+    if (args.use_stored_images) {
+      std::cerr << "Error: --svo and --use_stored_values are two different inputs; pass one."
+                << std::endl;
+      return EXIT_FAILURE;
+    }
+  }
+
   // Session (traceable capture mode): read and its folder prepared before
   // opening the camera (.ai/specs/persistencia-captura R1-R3)
   const bool use_session = !args.session_file.empty();
@@ -727,6 +744,12 @@ int main(int argc, char* argv[]) {
         std::cout << " * ZED X One GS Virtual Stereo Camera detected."
                   << std::endl;
       }
+    }
+
+    if (!args.svo_path.empty()) {
+      init_params.input.setFromSVOFile(args.svo_path.c_str());
+      std::cout << " * Input: SVO file " << args.svo_path
+                << " (self calibration disabled, as live)" << std::endl;
     }
 
     auto status = zed_camera.open(init_params);
@@ -960,7 +983,22 @@ int main(int argc, char* argv[]) {
       const cv::Scalar info_color = cv::Scalar(50, 210, 50);
       const cv::Scalar warn_color = cv::Scalar(0, 50, 250);
 
-      if (zed_camera.grab() == sl::ERROR_CODE::SUCCESS) {
+      const sl::ERROR_CODE grabbed = zed_camera.grab();
+      if (grabbed == sl::ERROR_CODE::END_OF_SVOFILE_REACHED) {
+        // --svo: the file is over; calibrate with what was collected, if enough
+        const int count = std::max(image_count, 0);
+        if (canFinishManually(count)) {
+          end_reason = "end of the SVO file";
+          std::cout << ">>> End of the SVO file: " << count << " samples" << std::endl;
+          std::cout << " *** Starting the calibration process ***" << std::endl;
+          break;
+        }
+        std::cerr << "End of the SVO file with " << count << " samples: at least "
+                  << MIN_CALIBRATION_SAMPLES << " are needed to calibrate." << std::endl;
+        zed_camera.close();
+        return EXIT_FAILURE;
+      }
+      if (grabbed == sl::ERROR_CODE::SUCCESS) {
         grab_timestamp_ns = static_cast<int64_t>(
             zed_camera.getTimestamp(sl::TIME_REFERENCE::IMAGE).getNanoseconds());
         zed_camera.retrieveImage(zed_imageL, sl::VIEW::LEFT_UNRECTIFIED_BGR);

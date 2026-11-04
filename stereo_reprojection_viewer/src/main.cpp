@@ -415,6 +415,13 @@ int main(int argc, char **argv) {
     }
   }
 
+  // Raw factory parameters, as in the calibration tools: the SDK
+  // self-calibration would change the extrinsics at every opening
+  // (.ai/specs/higiene-ferramentas R1). init_params serves every input: live,
+  // SVO and virtual stereo.
+  init_params.camera_disable_self_calib = true;
+  std::cout << " * Self calibration: disabled" << std::endl;
+
   // Open the camera
   auto returned_state = zed.open(init_params);
   if (returned_state > ERROR_CODE::SUCCESS) {

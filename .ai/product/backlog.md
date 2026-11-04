@@ -311,7 +311,7 @@ Por que esta ordem:
   - Só se B falhar no portão: a referência de B vira a calibração operacional com acrílico, sem
     captura nova.
 
-- [ ] **higiene-ferramentas** — Autocalibração no visualizador e `--svo` na calibração
+- [x] **higiene-ferramentas** — Autocalibração no visualizador e `--svo` na calibração
   - Valor: baixo · Esforço: P · MVP: não
   - Depende de: —
   - `stereo_reprojection_viewer` abre a ZED 2i com a autocalibração ativa

@@ -30,12 +30,15 @@
 
 ## Critérios de aceitação
 
-- [ ] Num SVO de teste, gravado com o `ZED_Explorer` da ZED 2i de bancada,
-      `zed_stereo_calibration --svo` mostra as imagens do SVO e não as da câmera conectada.
-- [ ] O visualizador imprime ou registra a autocalibração desligada. O código tem a opção em todos
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-04.
+
+- [x] Num SVO de teste da ZED 2i de bancada, `zed_stereo_calibration --svo` lê o SVO e não a
+      câmera conectada: para no fim do arquivo (gravado com um gravador próprio, não com o
+      `ZED_Explorer`; plan, etapa 2).
+- [x] O visualizador imprime ou registra a autocalibração desligada. O código tem a opção em todos
       os caminhos.
-- [ ] A regressão do xadrez é idêntica.
-- [ ] Com `--svo` e `--session` juntos, a ferramenta recusa com mensagem clara.
+- [x] A regressão do xadrez é idêntica.
+- [x] Com `--svo` e `--session` juntos, a ferramenta recusa com mensagem clara.
 
 ## Perguntas em aberto
 
