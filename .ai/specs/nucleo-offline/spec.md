@@ -114,18 +114,35 @@ Os scripts descartáveis de `calib_runs/tools/` fazem parte disso, mas:
 
 ## Critérios de aceitação
 
-- [ ] O modo de compatibilidade, com as detecções exportadas de
-      `2026-11-03_camera_settings`, reproduz o YAML do C++ (K, D, R, T) até 1e-6 relativo.
-- [ ] Os pontos 3D das tags 0, 5, 30 e 35 coincidem com os valores de
-      `tests/test_geometry.cpp`.
-- [ ] Um YAML gravado pelo pacote é carregado pelo `zed_stereo_checker --calib_opencv`.
-- [ ] Os dados sintéticos sem ruído, calibrados com o modelo verdadeiro, recuperam K e T até 1e-5
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-03.
+
+- [x] O modo de compatibilidade, com as detecções das imagens de `2026-11-03_camera_settings`
+      (`recalib_cs/captura_01`), reproduz o YAML do C++: K e T até 1e-6 relativo, D até 1e-6, R até
+      1e-9.
+- [x] Os pontos 3D das tags 0, 5, 30 e 35 coincidem com os valores de `tests/test_geometry.cpp`.
+- [x] Um YAML gravado pelo pacote é carregado pelo `zed_stereo_checker --calib_opencv`. Para isso
+      o `Size` é gravado como sequência: o SDK recusa a matriz 2×1 que o `cv2` grava por padrão.
+- [x] Os dados sintéticos sem ruído, calibrados com o modelo verdadeiro, recuperam K e T até 1e-5
       relativo, R até 1e-7, com RMS < 1e-4 px, e projetam o alvo como o modelo verdadeiro até
       1e-3 px. (Critério corrigido na implementação: os pontos `float32` têm ~1e-5 px de
       quantização, e os coeficientes racionais são correlacionados demais para serem comparados
       um a um.)
-- [ ] O teste de "sem detecção em Python" passa.
-- [ ] `python3 -m pytest analysis/tests` passa no container.
+- [x] O teste de "sem detecção em Python" passa.
+- [x] `python3 -m pytest` passa no container: 44 testes, mais 1 estatístico lento sob
+      `ZEDCAL_SLOW=1`.
+
+**Registrado na implementação:**
+- **Estéreo fisheye:** indisponível no binding Python do OpenCV 4.5.4 (R4).
+- **O bootstrap (R10) superestima a dispersão em ~1,6×** com 25 vistas. A incerteza vem da
+  dispersão entre capturas (plan, etapa 8).
+- **Nas 25 imagens de `2026-11-03_camera_settings`:**
+  - `common_joint` e `all_joint` dão o mesmo resultado: no modo `joint`, o ajuste estéreo
+    reotimiza os intrínsecos só com as tags comuns. Para os intrínsecos usarem todas as tags de
+    cada câmera, o estéreo precisa ser `fixed`;
+  - o fy/fx de +0,28–0,29 % aparece em todas as variantes, inclusive na `all_fixed_none`. A seleção
+    das tags não é a causa.
+
+  Esses dois pontos entram no piloto.
 
 ## Perguntas em aberto
 

@@ -122,7 +122,7 @@ Por que esta ordem:
   - **Regressão:** sem as flags novas, o recálculo de `calib_runs/regress_chess/` dá o mesmo
     resultado (`.ai/docs/bench.md`).
 
-- [ ] **nucleo-offline** — Pacote Python: leitura dos dados, calibração offline e dados sintéticos
+- [x] **nucleo-offline** — Pacote Python: leitura dos dados, calibração offline e dados sintéticos
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: persistencia-captura
   - Faz quatro coisas:
