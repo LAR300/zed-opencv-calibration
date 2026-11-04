@@ -6,25 +6,34 @@ rodadas, em `ros2_ws/dev/calib_runs/<data>_<o_que>/`, fora deste repositório.
 
 ## Permissões
 
+Verificação, sem alterar nada, no **host**: `scripts/bench/check_zed_access.sh --check`. Ela
+confere o SDK para o `admin`, o nó USB do HID da câmera (e o `hidraw`, quando existe), a regra udev
+e a leitura das três temperaturas pelo `zed_access_check` (compile antes:
+`cmake --build build --target zed_access_check`, no container).
+
 - **O ZED SDK fica ilegível para o usuário `admin`.** `/usr/local/zed` é `root:zed 770`, e o
   entrypoint do container não põe o `admin` no grupo `zed`. Qualquer binário da ZED (estas
   ferramentas e o `zed-ros2-wrapper`) falha com
-  `libsl_zed.so: cannot open shared object file`, o que parece instalação quebrada. Correção para o
-  container em execução:
-  `docker exec --user root isaac-ros-dev usermod -aG zed admin`. Ela some quando o container é
-  recriado. A correção permanente seria no `docker/scripts/entrypoint_additions/` do `isaac_ros`,
-  e ainda não foi feita.
-- **A IMU e os sensores da ZED 2i precisam de acesso ao HID, e o host não tem as regras udev da
-  Stereolabs.** A câmera abre, mas o SDK registra `[ZED][MCU] Permissions denied` e
-  `Sensors could not be initialized`. Sem IMU não há `left_cam_imu_transform` nem TF `imu_link`, e o
-  `LED_STATUS` não pode ser lido. O SDK abre o HID via libusb, então **dois** nós precisam de
-  escrita:
-  - o `hidraw` cujo `/sys/class/hidraw/*/device/uevent` mostra `2B03:F881`;
-  - o `/dev/bus/usb/<bus>/<dev>` correspondente, visto no `lsusb`.
-
-  Correção rápida: `chmod 666` nos dois, como root no container (o `/dev` é o do host). Ela some ao
-  desconectar a câmera. A correção permanente seria uma regra udev no host para `idVendor 2b03`, que
-  ainda não foi instalada.
+  `libsl_zed.so: cannot open shared object file`, o que parece instalação quebrada.
+  - **Correção:** `scripts/bench/fix_zed_group.sh` no host, depois de cada recriação do container.
+  - **Recomendação, não feita aqui:** a correção permanente é no
+    `docker/scripts/entrypoint_additions/` do `isaac_ros` (um `05-zed-group.sh` que faça o
+    `usermod -aG zed admin`, como o `05-device-groups.sh` faz para o `render`).
+- **A IMU e os sensores da ZED 2i precisam de acesso ao HID.** Sem ele, a câmera abre, mas o SDK
+  registra `[ZED][MCU] Permissions denied` e `Sensors could not be initialized`: sem IMU, sem
+  `left_cam_imu_transform` nem TF `imu_link`, sem `LED_STATUS` e sem as temperaturas do
+  `meta.json`.
+  - O SDK abre o HID pela libusb: o nó que precisa de escrita é o `/dev/bus/usb/<bus>/<dev>` da
+    interface `ZED-2i HID INTERFACE` (`2b03:f881`). A interface de vídeo (`2b03:f880`) passa pelo
+    driver UVC do kernel (`/dev/video*`) e não precisa.
+  - O `hidraw` da câmera **some** depois que o SDK abre a câmera (ele desliga o driver HID do
+    kernel) e só volta ao reconectar.
+  - **Correção:** `scripts/bench/install_zed_udev.sh` no host (pede `sudo`; `--dry-run` mostra o
+    que faria; uma segunda execução não muda nada). Instala `config/udev/99-stereolabs-zed.rules`
+    (`0666`, grupo `plugdev`, como a regra da RealSense do host) e recarrega o udev. Depois,
+    reconecte a câmera.
+  - Em 2026-11-04 o nó do HID já estava `0666` sem regra instalada, provavelmente por um `chmod`
+    anterior; isso some na próxima reconexão.
 
 ## Rodando as ferramentas
 

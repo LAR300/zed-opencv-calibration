@@ -1,0 +1,7 @@
+# Stereolabs ZED cameras (USB idVendor 2b03): the video interface, the HID
+# interface of the sensors (IMU, barometer, temperatures) and its hidraw node.
+# Same mode and group as the RealSense rule of the isaac_ros host
+# (docker/udev_rules/99-realsense-libusb-custom.rules).
+# Installed by scripts/bench/install_zed_udev.sh (.ai/specs/ambiente-sensores R1).
+SUBSYSTEM=="usb", ATTR{idVendor}=="2b03", MODE:="0666", GROUP:="plugdev"
+KERNEL=="hidraw*", ATTRS{idVendor}=="2b03", MODE:="0666", GROUP:="plugdev"

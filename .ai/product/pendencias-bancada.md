@@ -68,3 +68,11 @@
 - [ ] **Três registros a frio** em dias diferentes (plan, etapa 4), câmera desligada há ≥ 2 h,
       controles manuais (`--camera_settings`), luz fixa; depois `zedcal.thermal_command` e o X
       proposto para aprovação.
+
+## ambiente-sensores
+
+- [ ] **Instalar a regra udev no host** (`scripts/bench/install_zed_udev.sh`, pede `sudo`),
+      reconectar a câmera e rodar `scripts/bench/check_zed_access.sh --check`; uma segunda
+      instalação não deve mudar nada (plan, etapa 2).
+- [ ] **Recriar o container** e conferir que o `--check` reprova o SDK e que
+      `scripts/bench/fix_zed_group.sh` o conserta (plan, etapas 1 e 3).
