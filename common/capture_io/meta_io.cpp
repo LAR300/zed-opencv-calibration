@@ -1,5 +1,7 @@
 #include "meta_io.hpp"
 
+#include "json_write.hpp"
+
 #include <ctime>
 #include <filesystem>
 #include <fstream>
@@ -9,30 +11,20 @@
 
 namespace {
 
-// cv::FileStorage cannot write JSON null, true or false. These markers are
-// written as texts and replaced by the literals after encoding.
-const std::string kNull = "__ZEDCAL_NULL__";
-const std::string kTrue = "__ZEDCAL_TRUE__";
-const std::string kFalse = "__ZEDCAL_FALSE__";
+using json_write::kNull;
+using json_write::kTrue;
+using json_write::kFalse;
 
 void writeOptional(cv::FileStorage& fs, const char* key, const std::optional<double>& v) {
-  if (v)
-    fs << key << *v;
-  else
-    fs << key << kNull;
+  json_write::optional(fs, key, v);
 }
 
 void writeOptionalText(cv::FileStorage& fs, const char* key,
                        const std::optional<std::string>& v) {
-  if (v)
-    fs << key << *v;
-  else
-    fs << key << kNull;
+  json_write::optionalText(fs, key, v);
 }
 
-void writeBool(cv::FileStorage& fs, const char* key, bool v) {
-  fs << key << (v ? kTrue : kFalse);
-}
+void writeBool(cv::FileStorage& fs, const char* key, bool v) { json_write::boolean(fs, key, v); }
 
 void writeSettings(cv::FileStorage& fs, const char* key,
                    const std::vector<std::pair<std::string, int>>& settings) {
@@ -71,16 +63,7 @@ void writeSession(cv::FileStorage& fs, const Session& s) {
   fs << "}";
 }
 
-void replaceAll(std::string& text, const std::string& from, const std::string& to) {
-  for (size_t pos = text.find(from); pos != std::string::npos;
-       pos = text.find(from, pos + to.size()))
-    text.replace(pos, from.size(), to);
-}
-
-// The texts that come from the user must not contain a marker
-bool usesMarker(const std::string& text) {
-  return text.find("__ZEDCAL_") != std::string::npos;
-}
+using json_write::usesMarker;
 
 bool anyTextUsesMarker(const CaptureMeta& m) {
   const Session& s = m.session;
@@ -153,26 +136,7 @@ bool writeCaptureMeta(const std::string& path, const CaptureMeta& m, std::string
     return false;
   }
 
-  replaceAll(text, "\"" + kNull + "\"", "null");
-  replaceAll(text, "\"" + kTrue + "\"", "true");
-  replaceAll(text, "\"" + kFalse + "\"", "false");
-
-  const std::string tmp = path + ".tmp";
-  {
-    std::ofstream out(tmp, std::ios::trunc);
-    out << text;
-    if (!out.good()) {
-      error = "Cannot write '" + tmp + "'";
-      return false;
-    }
-  }
-  std::error_code ec;
-  std::filesystem::rename(tmp, path, ec);
-  if (ec) {
-    error = "Cannot rename '" + tmp + "' to '" + path + "': " + ec.message();
-    return false;
-  }
-  return true;
+  return json_write::finishJson(text, path, error);
 }
 
 std::string utcTimestamp(std::chrono::system_clock::time_point time) {

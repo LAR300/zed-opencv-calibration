@@ -32,7 +32,17 @@
   `outlier_floor_px > 0`, `prior` em {`none`, `factory`}. Seção ausente usa os padrões.
   - Testes primeiro: sem a seção, os padrões; cada valor inválido é recusado.
   - **Pronto quando:** `ctest` verde.
-- [ ] 3. **Escritor do relatório** (R5–R7). `CalibrationReportWriter` em JSON (`cv::FileStorage`),
+- [x] 3. **Escritor do relatório** (R5–R7). `common/capture_io/calib_report.{hpp,cpp}`
+  (`writeCalibrationReport`).
+  - Cada RMS vem com a convenção `per_corner_2d`, e há um bloco paralelo `mse_per_coordinate_px2`.
+  - Por vista: os cantos usados, o erro no ajuste estéreo e a remoção (etapa e erro).
+  - Os desvios-padrão da última calibração mono, e `std_dev_stereo: null`.
+  - Os marcadores de `null`/`true`/`false` saíram do `meta_io` para o `json_write.hpp`,
+    compartilhado.
+
+  Testes em `tests/test_calib_report.cpp` (143/143); o `json.load` do Python lê o arquivo.
+
+  Especificação original da etapa: `CalibrationReportWriter` em JSON (`cv::FileStorage`),
   com os campos de R3 a R7.
   - Testes primeiro: um relatório com 2 vistas, uma removida, é relido com os mesmos campos; o
     `json.load` do Python lê o arquivo.
