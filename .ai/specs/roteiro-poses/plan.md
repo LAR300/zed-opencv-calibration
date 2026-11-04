@@ -50,14 +50,32 @@
 
 ### Fase B — GUI e integração
 
-- [ ] 4. **Modo roteiro na coleta** (R5, R7, R8, R9, R12). A sessão aponta o roteiro; a pose
-  esperada e as grandezas aparecem na tela; o salvamento exige R8; o filtro de dissimilaridade é
-  desligado; as grandezas vão para o `meta.json`.
+- [ ] 4. **Modo roteiro na coleta** (R5, R7, R8, R9, R12). **Implementado em 2026-11-04; falta a
+  verificação com o alvo.**
+  - Sessão: chaves opcionais `roteiro` e `pose_calibration` (padrão: a F exportada em
+    `<output_root>/fabrica/SN<serial>/`); caminhos relativos à pasta da sessão.
+  - Lógica testável em `common/pose_script/`: `ScriptRunner` (ordem, `o`/`k`/`b`, resumo),
+    `decideScriptSave` (regra de R8) e `estimateTargetPose` (o mesmo PnP robusto do Python; teste
+    com a distorção de F e o alvo a ±35° na borda). 172/172 testes C++.
+  - Na coleta: retângulo da pose esperada na imagem esquerda; painel na direita com a pose,
+    as grandezas (verde/vermelho), a imobilidade e a nitidez do alvo; o filtro de
+    dissimilaridade e o de nitidez da imagem inteira saem; as métricas X/Y/Size/Skew **não** são
+    atualizadas no modo roteiro (desvio de R9: a cobertura é verificada offline pelo
+    `cobertura`); o `meta.json` ganha `pose`, `out_of_tolerance`, `still` por par e `script`
+    com os eventos.
+  - Verificado ao vivo sem o alvo (Xvfb, teclas simuladas): `k` ×3, `b`, `s` e `o` recusados
+    com os motivos certos, `k` até o fim; resumo com as 63 puladas; "too few pairs" e saída sem
+    calibrar; 65 eventos no `meta.json`. Regressão do xadrez idêntica.
+
+  Especificação original da etapa: A sessão aponta o roteiro; a pose esperada e as grandezas
+  aparecem na tela; o salvamento exige R8; o filtro de dissimilaridade é desligado; as grandezas
+  vão para o `meta.json`.
   - **Pronto quando:**
     - na bancada, as 9 poses do bloco 1 "perto" são salvas com os ids certos;
     - uma pose do bloco 3 a 90° é salva logo depois da de 0° na mesma posição;
     - a regressão do xadrez é idêntica.
-- [ ] 5. **Teclas `o`, `k`, `b` e o fim do roteiro** (R10, R11).
+- [ ] 5. **Teclas `o`, `k`, `b` e o fim do roteiro** (R10, R11). Implementado com a etapa 4;
+  `k`, `b` e o fim verificados ao vivo; `o` salvando de fato precisa do alvo.
   - **Pronto quando:** cada tecla gera o registro esperado no `meta.json`, e o resumo final lista as
     poses salvas, fora de tolerância e puladas.
 - [ ] 6. **Captura completa de bancada.** As 63 poses.
@@ -68,6 +86,12 @@
   - **Pronto quando:** o guia permite fazer o roteiro sem consultar o código.
 
 ## Riscos
+
+- **A faixa "perto" do brief (70–80 % da largura) não cabe na altura da imagem.** O alvo é
+  quadrado e a imagem é 16:9: com 75 % da largura, ele tem 133 % da altura. Nas posições de canto
+  do bloco 1, mais da metade do alvo fica fora da imagem. O AprilGrid aceita vista parcial, mas o
+  "centro do alvo" em (1/6, 1/6) fica difícil de enquadrar. A maior fração com o alvo inteiro
+  visível é 0,56. Pergunta ao usuário (2026-11-04).
 
 - **A pose PnP com F pode ficar ruidosa** em vista parcial muito grande (bloco 4). Mostrar a
   grandeza como "indisponível" quando o PnP for mal condicionado, em vez de um valor errado.

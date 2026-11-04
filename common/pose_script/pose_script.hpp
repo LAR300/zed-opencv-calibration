@@ -63,6 +63,17 @@ struct ViewGeometry {
 ViewGeometry viewGeometry(const cv::Mat& K, const cv::Mat& D, cv::Size image_size,
                           cv::Size2d board_size_mm, const cv::Vec3d& rvec, const cv::Vec3d& tvec);
 
+// Pose of the planar target (z = 0) from 4 or more corners, for the operator
+// guidance only (roteiro-poses R7). Candidates: IPPE on points undistorted with
+// tight criteria (the default undistortion is too coarse at the border of a
+// wide-angle lens), IPPE as OpenCV does it and the iterative PnP; each refined
+// with Levenberg-Marquardt, the lowest reprojection RMS wins. Same approach as
+// the Python zedcal.residuals.pose. Rational model only. False with fewer than
+// 4 points or no solution.
+bool estimateTargetPose(const std::vector<cv::Point3f>& obj, const std::vector<cv::Point2f>& img,
+                        const cv::Mat& K, const cv::Mat& D, cv::Vec3d& rvec, cv::Vec3d& tvec,
+                        double* rms_px = nullptr);
+
 // Per quantity: inside the pose's range and tolerances?
 struct PoseCheck {
   bool fraction = false, position = false, tilt_h = false, tilt_v = false, rotation = false;

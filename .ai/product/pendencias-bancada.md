@@ -33,17 +33,19 @@
 
 ## roteiro-poses
 
-- [ ] **Fase B inteira** (plan, etapas 4–7): modo roteiro na coleta (pose esperada e grandezas na
-      tela, salvamento só dentro da tolerância), teclas `o`/`k`/`b`, a captura completa das 63
-      poses com o tempo registrado e a revisão das tolerâncias, e o guia de bancada. A lógica pura
-      (Fase A) está pronta e testada.
+- [ ] **Modo roteiro com o alvo** (plan, etapas 4–5; implementado em 2026-11-04): as 9 poses do
+      bloco 1 "perto" salvas com os ids certos; uma pose do bloco 3 a 90° salva logo depois da de
+      0°; `o` salvando com `out_of_tolerance: true`; conferir no painel se as grandezas medidas
+      batem com o que se vê (sinais das inclinações e da rotação).
+- [ ] **Captura completa das 63 poses** (plan, etapa 6), com o tempo, a revisão das tolerâncias
+      e a decisão sobre a faixa "perto" (plan, riscos); depois o guia de bancada (etapa 7).
 
 ## captura-estatica
 
 - [ ] **`--measure_static_noise`** (plan, etapa 4): medir com o alvo parado e trocar os limiares
       provisórios de `config/session_example.yaml` (1,0 s, 0,5 px, nitidez 0) pelos medidos.
-- [ ] **Integração na coleta** (plan, etapa 5): painel, bloqueio do `s` e campos no `meta.json`,
-      com a regressão do xadrez idêntica.
+- [ ] **Integração na coleta com o alvo** (plan, etapa 5): no modo roteiro, o bloqueio do `s`
+      até a imobilidade, com os limiares medidos na etapa 4.
 
 ## cobertura
 

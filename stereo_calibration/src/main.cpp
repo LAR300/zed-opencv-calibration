@@ -1,3 +1,4 @@
+#include <cctype>
 #include <chrono>
 #include <cstdlib>
 #include <filesystem>
@@ -17,9 +18,12 @@
 #include "detections_io.hpp"
 #include "meta_io.hpp"
 #include "opencv_calibration.hpp"
+#include "pose_script.hpp"
 #include "sample_limits.hpp"
 #include "session.hpp"
+#include "script_runner.hpp"
 #include "session_calibration.hpp"
+#include "static_capture.hpp"
 #include "timelapse.hpp"
 #include "zed_camera_settings.hpp"
 #include "zed_open.hpp"
@@ -64,6 +68,21 @@ void applyCoverageIndicatorOverlay(cv::Mat& image,
 void applyPosIndicatorOverlay(cv::Mat& image, const cv::Mat& pos_indicator);
 void drawBanner(cv::Mat& image, const std::vector<std::string>& lines,
                 const cv::Scalar& color);
+
+// Script mode (.ai/specs/roteiro-poses R5-R11, captura-estatica R1-R6): what
+// the current frame shows of the target, for the panel and the save rule
+struct ScriptFrame {
+  bool pose_known = false;
+  ViewGeometry view;
+  PoseCheck check;
+  StabilityState still;
+  double sharp_l = 0.0, sharp_r = 0.0;
+  bool sharp = false;
+};
+std::string describePose(const ScriptPose& pose);
+void drawExpectedPose(cv::Mat& image, const ScriptPose& pose);
+void drawScriptPanel(cv::Mat& image, const ScriptRunner& script, const ScriptFrame& f,
+                     const StaticCaptureConfig& still_cfg, const std::string& message);
 
 /// Rendering
 constexpr int text_area_height = 380;   // Height of the area below the images
@@ -819,6 +838,56 @@ int main(int argc, char* argv[]) {
       capture_meta.camera_settings_start = snapshotCameraSettings(zed_camera).values;
       capture_meta.started_utc = utcNow();
     }
+
+    // Script mode (.ai/specs/roteiro-poses R5-R12): the session names a pose
+    // script; the PnP pose that guides the operator uses F, or the calibration
+    // the session names, and never enters the calibration (R7)
+    std::unique_ptr<ScriptRunner> script;
+    std::unique_ptr<StabilityTracker> stability;
+    OpenCVStereoCalibration pose_calib;
+    std::string script_message;  // why the last 's'/'o' did not save
+    if (use_session && session.pose_script) {
+      std::string error;
+      PoseScript loaded;
+      if (use_timelapse) {
+        std::cerr << "Error: a session with 'roteiro' cannot be recorded with --timelapse."
+                  << std::endl;
+        return EXIT_FAILURE;
+      }
+      if (!loadPoseScript(*session.pose_script, loaded, error)) {
+        std::cerr << "Error: " << error << std::endl;
+        return EXIT_FAILURE;
+      }
+      const std::string calib_file =
+          session.pose_calibration
+              ? *session.pose_calibration
+              : session.output_root + "/fabrica/SN" + std::to_string(zed_info.serial_number) +
+                    "/calib_factory_rational8.yml";
+      if (!readOpenCVCalibration(calib_file, pose_calib, error)) {
+        std::cerr << "Error: the script mode needs a calibration for the pose guidance: " << error
+                  << ". Export F with zed_export_factory, or set 'pose_calibration' in the "
+                     "session."
+                  << std::endl;
+        return EXIT_FAILURE;
+      }
+      if (pose_calib.fisheye ||
+          pose_calib.image_size != cv::Size(zed_info.camera_configuration.resolution.width,
+                                            zed_info.camera_configuration.resolution.height)) {
+        std::cerr << "Error: the pose guidance calibration " << calib_file
+                  << " must be a rational model at the camera resolution." << std::endl;
+        return EXIT_FAILURE;
+      }
+      script = std::make_unique<ScriptRunner>(loaded);
+      stability = std::make_unique<StabilityTracker>(session.static_capture.max_displacement_px,
+                                                     session.static_capture.window_s);
+      ScriptMeta script_meta;
+      script_meta.name = loaded.name;
+      script_meta.file = *session.pose_script;
+      capture_meta.script = script_meta;
+      std::cout << " * Script: " << loaded.name << " (" << script->size() << " poses), pose "
+                << "guidance with " << calib_file << std::endl
+                << "   's' save, 'o' save out of tolerance, 'k' skip, 'b' back" << std::endl;
+    }
     // Writes meta.json; called after every saved pair and when the collection ends
     auto write_meta = [&]() {
       if (!use_session) return;
@@ -971,6 +1040,7 @@ int main(int argc, char* argv[]) {
                 << " pairs), pose_id 'thermal'" << std::endl;
     }
 
+    bool script_done = false;
     while (1) {
       if (key == 'q' || key == 'Q' || key == 27 || interruptRequested()) {
         std::cout << "Calibration aborted by user." << std::endl;
@@ -978,6 +1048,35 @@ int main(int argc, char* argv[]) {
         settings_guard.restore();
         zed_camera.close();
         return EXIT_SUCCESS;
+      }
+
+      // End of the script (roteiro-poses R11): the summary, then the
+      // calibration when there are enough pairs
+      if (script && script->finished() && !script_done) {
+        script_done = true;
+        const ScriptRunner::Summary sum = script->summary();
+        auto list = [](const std::vector<std::string>& ids) {
+          std::string out;
+          for (const auto& id : ids) out += (out.empty() ? "" : " ") + id;
+          return out.empty() ? std::string("-") : out;
+        };
+        std::cout << ">>> Script complete: " << sum.saved.size() << " saved, "
+                  << sum.out_of_tolerance.size() << " out of tolerance, " << sum.skipped.size()
+                  << " skipped" << std::endl
+                  << "    out of tolerance: " << list(sum.out_of_tolerance) << std::endl
+                  << "    skipped: " << list(sum.skipped) << std::endl;
+        const int count = std::max(image_count, 0);
+        if (canFinishManually(count)) {
+          end_reason = "script complete";
+          acquisition_completed = true;
+        } else {
+          std::cout << "    " << count << " pairs: at least " << MIN_CALIBRATION_SAMPLES
+                    << " are needed to calibrate; ending without calibration." << std::endl;
+          end_meta("script complete, too few pairs to calibrate");
+          settings_guard.restore();
+          zed_camera.close();
+          return EXIT_SUCCESS;
+        }
       }
 
       const cv::Scalar info_color = cv::Scalar(50, 210, 50);
@@ -1023,6 +1122,7 @@ int main(int argc, char* argv[]) {
         std::vector<cv::Point2f> tag_pts_l, tag_pts_r;
         std::string tags_reason;
         bool enough_tags = false;
+        ScriptFrame sf;  // script mode only
 
         if (use_aprilgrid) {
           tags_l = detectAprilGrid(rgb_l, aprilgrid.target,
@@ -1040,6 +1140,34 @@ int main(int argc, char* argv[]) {
           cv::Size full_size(camera_resolution.width, camera_resolution.height);
           drawAprilGridDetections(rgb_d_fill, tags_l, full_size);
           drawAprilGridDetections(rgb2_d, tags_r, full_size);
+
+          if (script && !script->finished()) {
+            // PnP on every left tag, with the guidance calibration (R6, R7)
+            std::vector<cv::Point3f> obj;
+            std::vector<cv::Point2f> img;
+            for (const auto& [id, corners] : tags_l) {
+              const auto o = tagCorners3D(aprilgrid.target, id);
+              obj.insert(obj.end(), o.begin(), o.end());
+              img.insert(img.end(), corners.begin(), corners.end());
+            }
+            cv::Vec3d rv, tv;
+            if (obj.size() >= 8 &&
+                estimateTargetPose(obj, img, pose_calib.K_left, pose_calib.D_left, rv, tv)) {
+              const cv::Size2f board = aprilgrid.target.boardSizeMm();
+              sf.view = viewGeometry(pose_calib.K_left, pose_calib.D_left, pose_calib.image_size,
+                                     cv::Size2d(board.width, board.height), rv, tv);
+              sf.check = checkPose(sf.view, script->current(), script->script().tolerances);
+              sf.pose_known = true;
+            }
+            // Stillness and target sharpness (captura-estatica R1, R2)
+            sf.still = stability->update(tags_l, tags_r, steady_seconds());
+            sf.sharp_l = targetSharpness(rgb_l, tags_l);
+            sf.sharp_r = targetSharpness(rgb_r, tags_r);
+            const double min_sharp = session.static_capture.min_target_sharpness;
+            sf.sharp = sf.sharp_l >= min_sharp && sf.sharp_r >= min_sharp;
+            drawExpectedPose(rgb_d_fill, script->current());
+            drawScriptPanel(rgb2_d, *script, sf, session.static_capture, script_message);
+          }
         } else {
           found_l = cv::findChessboardCorners(rgb_d, cv::Size(h_edges, v_edges),
                                               pts_l);
@@ -1292,6 +1420,45 @@ int main(int argc, char* argv[]) {
           if (key == 'f' || key == 'F' || key == 's' || key == 'S' || key == ' ') key = -1;
         }
 
+        // Script mode keys (roteiro-poses R8, R10): 's'/space and 'o' go
+        // through the save rule; 'k' skips, 'b' goes back
+        bool script_shot = false;
+        bool script_out = false;
+        if (script && !script->finished() && !acquisition_completed) {
+          const char k = static_cast<char>(std::tolower(key == ' ' ? 's' : key));
+          if (k == 's' || k == 'o') {
+            SaveConditions c;
+            c.pose = sf.check;
+            c.pose_known = sf.pose_known;
+            c.enough_tags = enough_tags;
+            c.still = sf.still.stable;
+            c.sharp = sf.sharp;
+            const SaveDecision d = decideScriptSave(k, c);
+            script_shot = d.save;
+            script_out = d.out_of_tolerance;
+            script_message.clear();
+            for (const auto& r : d.reasons)
+              script_message += (script_message.empty() ? "" : "; ") + r;
+            if (!d.save)
+              std::cerr << "  ! " << script->current().id << " not saved: " << script_message
+                        << std::endl;
+          } else if (k == 'k') {
+            capture_meta.script->events.push_back({script->current().id, "skipped", std::nullopt});
+            std::cout << " * " << script->current().id << " skipped" << std::endl;
+            script->skip();
+            script_message.clear();
+            write_meta();
+          } else if (k == 'b') {
+            if (script->back()) {
+              capture_meta.script->events.push_back({script->current().id, "back", std::nullopt});
+              std::cout << " * back to " << script->current().id << std::endl;
+              script_message.clear();
+              write_meta();
+            }
+          }
+          if (k == 's' || k == 'o' || k == 'k' || k == 'b') key = -1;  // not the free mode keys
+        }
+
         if (acquisition_completed) {
           const int count = std::max(image_count, 0);
           const auto pct = [](float score) {
@@ -1347,7 +1514,7 @@ int main(int argc, char* argv[]) {
           continue;
         }
 
-        if ((key == 's' || key == 'S') || key == ' ' || timelapse_shot) {
+        if ((key == 's' || key == 'S') || key == ' ' || timelapse_shot || script_shot) {
           finish_message.clear();
           std::cout << "*** New acquisition triggered ***" << std::endl;
           if (timelapse_shot && !enough_tags)
@@ -1379,7 +1546,9 @@ int main(int argc, char* argv[]) {
             double sharpness_l = computeSharpness(rgb_l);
             double sharpness_r = computeSharpness(rgb_r);
             // the warm-up record keeps every pair: the analysis judges them
-            blurry_images = !timelapse &&
+            // the warm-up record keeps every pair: the analysis judges them;
+            // the script mode judges the target region instead (captura-estatica R2)
+            blurry_images = !timelapse && !script &&
                             (sharpness_l < min_sharpness || sharpness_r < min_sharpness);
             if (blurry_images) {
               std::cerr << "  ! Images too blurry (L=" << std::fixed
@@ -1387,7 +1556,7 @@ int main(int argc, char* argv[]) {
                         << " R=" << sharpness_r
                         << ", min=" << min_sharpness << "). Hold still and retry."
                         << std::endl;
-            } else if (timelapse ||
+            } else if (timelapse || script ||  // no dissimilarity filter (roteiro-poses R9)
                        (use_aprilgrid ? checker.testSample(pts_l, outside_pts, full_size)
                                       : checker.testSample(pts_l, full_size))) {
               low_target_variability_on_last_pics = false;
@@ -1400,7 +1569,8 @@ int main(int argc, char* argv[]) {
                 // Pair, then the detections of the saved files, read back as
                 // the calibration reads them (persistencia-captura R4-R7)
                 std::string rel_l, rel_r, io_error;
-                const std::string pose_label = timelapse ? "thermal" : "free";
+                const std::string pose_label =
+                    script ? script->current().id : (timelapse ? "thermal" : "free");
                 relativeImagePath("left", pose_label, image_count, rel_l, io_error);
                 relativeImagePath("right", pose_label, image_count, rel_r, io_error);
                 const std::string path_l = capture_dir + "/" + rel_l;
@@ -1441,6 +1611,34 @@ int main(int argc, char* argv[]) {
                                                   camera_opened_at)
                         .count();
                 read_temperatures(frame_meta);
+                if (script) {
+                  // What the operator saw when saving (roteiro-poses R7, captura-estatica R6)
+                  if (sf.pose_known) {
+                    PoseMeasurement pm;
+                    pm.fraction = sf.view.fraction;
+                    pm.center_x = sf.view.center.x;
+                    pm.center_y = sf.view.center.y;
+                    pm.tilt_h_deg = sf.view.tilt_h_deg;
+                    pm.tilt_v_deg = sf.view.tilt_v_deg;
+                    pm.rotation_deg = sf.view.rotation_deg;
+                    pm.distance_m = sf.view.distance_m;
+                    pm.in_tolerance = sf.check.all();
+                    frame_meta.pose = pm;
+                  }
+                  frame_meta.out_of_tolerance = script_out;
+                  StillMeta still;
+                  still.max_displacement_px = sf.still.max_displacement_px;
+                  still.window_s = sf.still.stable_for_s;
+                  still.sharpness_left = sf.sharp_l;
+                  still.sharpness_right = sf.sharp_r;
+                  still.threshold_displacement_px = session.static_capture.max_displacement_px;
+                  still.threshold_window_s = session.static_capture.window_s;
+                  still.threshold_sharpness = session.static_capture.min_target_sharpness;
+                  frame_meta.still = still;
+                  capture_meta.script->events.push_back(
+                      {script->current().id, script_out ? "out_of_tolerance" : "saved", frame.n});
+                  script->saved(frame.n, script_out);
+                }
                 capture_meta.frames.push_back(frame_meta);
                 write_meta();
                 std::cout << " * Images saved: '" << rel_l << "' and '" << rel_r
@@ -1462,6 +1660,7 @@ int main(int argc, char* argv[]) {
               }
               image_count++;
               if (timelapse) continue;  // no coverage metrics nor maximum in a record
+              if (script) continue;     // the script replaces them (roteiro-poses R9, R11)
 
               // The checker only reports complete metrics; the maximum is
               // handled here (.ai/specs/sample-limits/decisions.md D1)
@@ -1752,4 +1951,90 @@ void drawBanner(cv::Mat& image, const std::vector<std::string>& lines,
                 cv::Point(box.x + 15, box.y + 30 + static_cast<int>(i) * line_height),
                 cv::FONT_HERSHEY_SIMPLEX, 0.8, color, 2);
   }
+}
+
+std::string describePose(const ScriptPose& pose) {
+  std::ostringstream ss;
+  ss << std::fixed << std::setprecision(2) << "width " << pose.fraction_min << "-"
+     << pose.fraction_max << ", centre (" << pose.center.x << ", " << pose.center.y << ")"
+     << std::setprecision(0);
+  if (pose.tilt_h_deg != 0.0) ss << ", tilt H " << std::showpos << pose.tilt_h_deg << std::noshowpos;
+  if (pose.tilt_v_deg != 0.0) ss << ", tilt V " << std::showpos << pose.tilt_v_deg << std::noshowpos;
+  if (pose.rotation_deg != 0.0) ss << ", rotation " << pose.rotation_deg;
+  return ss.str();
+}
+
+// The expected target, as the square it would make facing the camera, on the
+// left display image (roteiro-poses R5)
+void drawExpectedPose(cv::Mat& image, const ScriptPose& pose) {
+  const double w = 0.5 * (pose.fraction_min + pose.fraction_max) * image.cols;
+  const cv::Point2d c(pose.center.x * image.cols, pose.center.y * image.rows);
+  const cv::Rect box(cvRound(c.x - w / 2), cvRound(c.y - w / 2), cvRound(w), cvRound(w));
+  cv::rectangle(image, box, cv::Scalar(0, 220, 255), 2);
+  cv::drawMarker(image, cv::Point(cvRound(c.x), cvRound(c.y)), cv::Scalar(0, 220, 255),
+                 cv::MARKER_CROSS, 18, 2);
+}
+
+// Expected pose, measured quantities (green inside the tolerance, red outside),
+// stillness and target sharpness, on the right display image
+void drawScriptPanel(cv::Mat& image, const ScriptRunner& script, const ScriptFrame& f,
+                     const StaticCaptureConfig& still_cfg, const std::string& message) {
+  const int line = 22;
+  const cv::Rect box(0, 0, image.cols, line * 6 + 12);
+  cv::Mat roi = image(box);
+  cv::Mat dark(roi.size(), roi.type(), cv::Scalar(0, 0, 0));
+  cv::addWeighted(roi, 0.3, dark, 0.7, 0.0, roi);
+  const cv::Scalar white(240, 240, 240), green(60, 220, 60), red(60, 60, 240);
+  const double scale = 0.5;
+  int y = line;
+  auto text = [&](const std::string& t, int x, const cv::Scalar& color) {
+    cv::putText(image, t, cv::Point(x, y), cv::FONT_HERSHEY_SIMPLEX, scale, color, 1);
+    int base = 0;
+    return x + cv::getTextSize(t, cv::FONT_HERSHEY_SIMPLEX, scale, 1, &base).width + 12;
+  };
+  const ScriptPose& p = script.current();
+  text("Pose " + std::to_string(script.index() + 1) + "/" + std::to_string(script.size()) + "  " +
+           p.id,
+       8, white);
+  y += line;
+  text(describePose(p), 8, white);
+  y += line;
+  if (!f.pose_known) {
+    text("pose: not available (too few tags)", 8, red);
+  } else {
+    auto num = [](double v, int prec, bool sign = false) {
+      std::ostringstream o;
+      o << std::fixed << std::setprecision(prec) << (sign ? std::showpos : std::noshowpos) << v;
+      return o.str();
+    };
+    int x = 8;
+    x = text("width " + num(f.view.fraction, 2), x, f.check.fraction ? green : red);
+    x = text("centre (" + num(f.view.center.x, 2) + ", " + num(f.view.center.y, 2) + ")", x,
+             f.check.position ? green : red);
+    x = text("tilt H " + num(f.view.tilt_h_deg, 0, true), x, f.check.tilt_h ? green : red);
+    x = text("V " + num(f.view.tilt_v_deg, 0, true), x, f.check.tilt_v ? green : red);
+    x = text("rot " + num(f.view.rotation_deg, 0), x, f.check.rotation ? green : red);
+    text(num(f.view.distance_m, 2) + " m", x, white);
+  }
+  y += line;
+  {
+    std::ostringstream st;
+    st << std::fixed << std::setprecision(1);
+    if (f.still.indeterminate)
+      st << "stillness: indeterminate (few common corners)";
+    else if (f.still.stable)
+      st << "still for " << f.still.stable_for_s << " s";
+    else
+      st << "moving (" << std::setprecision(2) << f.still.displacement_px << " px; still for "
+         << std::setprecision(1) << f.still.stable_for_s << "/" << still_cfg.window_s << " s)";
+    int x = text(st.str(), 8, f.still.stable ? green : red);
+    std::ostringstream sh;
+    sh << std::fixed << std::setprecision(0) << "sharpness L " << f.sharp_l << " R " << f.sharp_r
+       << " (min " << still_cfg.min_target_sharpness << ")";
+    text(sh.str(), x, f.sharp ? green : red);
+  }
+  y += line;
+  text("s save   o save out of tolerance   k skip   b back   f calibrate   q abort", 8, white);
+  y += line;
+  if (!message.empty()) text("not saved: " + message, 8, red);
 }

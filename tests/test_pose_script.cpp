@@ -189,3 +189,50 @@ TEST(view_geometry_matches_the_shared_fixture) {
   }
   CHECK(n == 6);
 }
+
+TEST(target_pose_is_recovered_with_strong_distortion_at_the_border) {
+  // The factory distortion of the bench ZED 2i (rational, 2.1 mm lens): the
+  // case where a coarse undistortion gave a wrong pose in Python
+  const cv::Mat Kf = (cv::Mat_<double>(3, 3) << 533.82, 0, 632.115, 0, 533.845, 369.065, 0, 0, 1);
+  const cv::Mat Df = (cv::Mat_<double>(1, 8) << -0.432559, 2.10359, 8.81e-05, -7.08e-05, 0.166931,
+                      -0.320247, 1.96174, 0.33095);
+  std::vector<cv::Point3f> grid;
+  for (int r = 0; r < 12; ++r)
+    for (int c = 0; c < 12; ++c) grid.emplace_back(c * 57.2f, r * 57.2f, 0.0f);
+  int cases = 0;
+  for (double tilt : {-35.0, 0.0, 35.0})
+    for (double x : {-700.0, 0.0, 700.0})
+      for (double y : {-350.0, 0.0, 350.0}) {
+        const double b = tilt * CV_PI / 180.0;
+        const cv::Matx33d Ry(std::cos(b), 0, std::sin(b), 0, 1, 0, -std::sin(b), 0, std::cos(b));
+        const cv::Matx33d R = Ry * cv::Matx33d(1, 0, 0, 0, -1, 0, 0, 0, -1);
+        const cv::Vec3d centre(314.6, 314.6, 0.0);
+        const cv::Vec3d t = cv::Vec3d(x, y, 900.0) - R * centre;
+        cv::Vec3d rv;
+        cv::Rodrigues(R, rv);
+        std::vector<cv::Point2f> all;
+        cv::projectPoints(grid, rv, t, Kf, Df, all);
+        std::vector<cv::Point3f> obj;
+        std::vector<cv::Point2f> img;
+        for (size_t i = 0; i < all.size(); ++i)
+          if (all[i].x >= 0 && all[i].x < 1280 && all[i].y >= 0 && all[i].y < 720) {
+            obj.push_back(grid[i]);
+            img.push_back(all[i]);
+          }
+        if (obj.size() < 16) continue;
+        cv::Vec3d r_est, t_est;
+        double rms = -1.0;
+        CHECK(estimateTargetPose(obj, img, Kf, Df, r_est, t_est, &rms));
+        CHECK(rms < 1e-3);
+        CHECK(cv::norm(t_est - t) < 0.05);  // mm
+        cv::Matx33d R_est;
+        cv::Rodrigues(r_est, R_est);
+        cv::Vec3d dr;
+        cv::Rodrigues(cv::Mat(R_est * R.t()), dr);
+        CHECK(cv::norm(dr) < 1e-5);
+        ++cases;
+      }
+  CHECK(cases >= 20);
+  cv::Vec3d r, t;
+  CHECK(!estimateTargetPose({}, {}, Kf, Df, r, t));
+}

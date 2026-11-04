@@ -172,3 +172,58 @@ PoseCheck checkPose(const ViewGeometry& v, const ScriptPose& p, const Tolerances
   c.rotation = angleDifferenceDeg(v.rotation_deg, p.rotation_deg) <= t.angle_deg;
   return c;
 }
+
+bool estimateTargetPose(const std::vector<cv::Point3f>& obj, const std::vector<cv::Point2f>& img,
+                        const cv::Mat& K, const cv::Mat& D, cv::Vec3d& rvec, cv::Vec3d& tvec,
+                        double* rms_px) {
+  if (obj.size() < 4 || obj.size() != img.size()) return false;
+  std::vector<cv::Point2f> norm;
+  cv::undistortPoints(img, norm, K, D, cv::noArray(), cv::noArray(),
+                          cv::TermCriteria(cv::TermCriteria::COUNT | cv::TermCriteria::EPS, 100,
+                                           1e-12));
+  std::vector<std::pair<cv::Vec3d, cv::Vec3d>> candidates;
+  auto add = [&](const std::vector<cv::Mat>& rs, const std::vector<cv::Mat>& ts) {
+    for (size_t i = 0; i < rs.size() && i < ts.size(); ++i)
+      candidates.emplace_back(cv::Vec3d(rs[i].reshape(1, 3)), cv::Vec3d(ts[i].reshape(1, 3)));
+  };
+  std::vector<cv::Mat> rs, ts;
+  try {
+    cv::solvePnPGeneric(obj, norm, cv::Mat::eye(3, 3, CV_64F), cv::Mat(), rs, ts, false,
+                        cv::SOLVEPNP_IPPE);
+    add(rs, ts);
+    cv::solvePnPGeneric(obj, img, K, D, rs, ts, false, cv::SOLVEPNP_IPPE);
+    add(rs, ts);
+    if (obj.size() >= 6) {
+      cv::Mat r, t;
+      if (cv::solvePnP(obj, img, K, D, r, t, false, cv::SOLVEPNP_ITERATIVE))
+        candidates.emplace_back(cv::Vec3d(r.reshape(1, 3)), cv::Vec3d(t.reshape(1, 3)));
+    }
+  } catch (const cv::Exception&) {
+    // ill-conditioned input: whatever was found so far is still tried below
+  }
+  double best = -1.0;
+  for (auto [r, t] : candidates) {
+    cv::Mat rm(r), tm(t);
+    try {
+      cv::solvePnPRefineLM(obj, img, K, D, rm, tm);
+    } catch (const cv::Exception&) {
+      continue;
+    }
+    std::vector<cv::Point2f> proj;
+    cv::projectPoints(obj, rm, tm, K, D, proj);
+    double sq = 0.0;
+    for (size_t i = 0; i < img.size(); ++i) {
+      const cv::Point2f d = proj[i] - img[i];
+      sq += d.dot(d);
+    }
+    const double rms = std::sqrt(sq / img.size());
+    if (std::isfinite(rms) && (best < 0.0 || rms < best)) {
+      best = rms;
+      rvec = cv::Vec3d(rm.reshape(1, 3));
+      tvec = cv::Vec3d(tm.reshape(1, 3));
+    }
+  }
+  if (best < 0.0) return false;
+  if (rms_px) *rms_px = best;
+  return true;
+}

@@ -29,7 +29,13 @@
   e de nitidez em `noise.json`.
   - **Pronto quando:** na bancada, o arquivo existe com percentis, e os limiares padrão de
     `config/session_example.yaml` são atualizados a partir dele.
-- [ ] 5. **Integração na coleta** (R4–R6, R8). Painel, bloqueio do `s`, quadro salvo do fim da
+- [ ] 5. **Integração na coleta** (R4–R6, R8). **Feita no modo roteiro** (2026-11-04): painel
+  ("still for x s" / "moving"), nitidez do alvo E/D, `s` e `o` recusados sem imobilidade ou
+  nitidez, o quadro salvo é o corrente da janela estável, e `still` no `meta.json` com os
+  limiares. **Decisão:** a captura de sessão livre continua sem esse bloqueio até os limiares
+  serem medidos (etapa 4); com os limiares provisórios, ela poderia recusar todo par.
+
+  Especificação original da etapa: Painel, bloqueio do `s`, quadro salvo do fim da
   janela, campos no `meta.json`.
   - **Pronto quando:** o teste de bancada do critério de aceitação passa e a regressão do xadrez é
     idêntica.
