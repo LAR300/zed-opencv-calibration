@@ -88,7 +88,29 @@
   - Testes primeiro: o arquivo gerado passa no leitor da etapa 3; com σ = 0,1 px, o desvio dos
     resíduos medido sobre 10⁴ cantos fica em 0,1 ± 0,005 px.
   - **Pronto quando:** `pytest` verde.
-- [ ] 7. **Calibração offline** (R4–R8). Mono por câmera (`calibrateCameraExtended`), estéreo
+- [x] 7. **Calibração offline** (R4–R8). `zedcal/calib.py`:
+  - **Variantes:** `mono_points` `all`/`common`, `stereo` `joint`/`fixed`, `rejection`
+    `none`/`cpp`, modelos `rational8`/`radtan5`;
+  - **Funções:** `cpp_compatible()`, `calibrate()`, que devolve a calibração e o relatório (RMS
+    nas quatro formas, MSE por coordenada, desvios-padrão mono, vistas removidas), e `save()`,
+    que grava `calib_<modelo>_<variante>.yml` e `.report.json` e recusa sobrescrever;
+  - **Pontos em `float32`,** como no C++.
+
+  Testes em `tests/test_calib.py` (40/40 no total).
+  - **Paridade com o C++:** o modo de compatibilidade, com as detecções reais de
+    `recalib_cs/captura_01`, reproduz o `calib_cpp_rational8.yml`. K e T até 1e-6 relativo, D até
+    1e-6 absoluto, R até 1e-9.
+  - **Critério corrigido:** "recuperar até 1e-6" não se aplica ao `float32`, que tem ~1e-5 px de
+    quantização, nem aos coeficientes do modelo racional, que são correlacionados. O teste dos
+    dados exatos passou a exigir K e T até 1e-5, R até 1e-7, RMS < 1e-4 px e a mesma projeção do
+    alvo até 1e-3 px.
+  - **Limitação:** o `cv2.fisheye.stereoCalibrate` do OpenCV 4.5.4 falha no binding Python (asserção
+    `!fixedSize()` em todos os formatos testados). O mono fisheye funciona; o estéreo fisheye levanta
+    `NotImplementedError` com o motivo. A ZED 2i usa o modelo racional.
+  - O NumPy devolve `D` com 14 coeficientes para o modelo racional; `_trim` corta no tamanho do
+    modelo e confere que o resto é zero.
+
+  Especificação original da etapa: Mono por câmera (`calibrateCameraExtended`), estéreo
   `joint` ou `fixed` (`stereoCalibrateExtended`), rejeição configurável, modo de compatibilidade,
   YAML e relatório.
   - Testes primeiro: dados sintéticos sem ruído recuperam os parâmetros até 1e-6 relativo;
