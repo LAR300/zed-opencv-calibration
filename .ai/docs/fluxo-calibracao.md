@@ -96,9 +96,13 @@ e câmera parados, 30 s) e copie os valores sugeridos no `noise.json` para a se�
 da sessão:
 
 ```bash
-./zed_stereo_calibration --target_yaml target.yaml --session sessao_ruido.yaml --measure_static_noise 30
+./zed_stereo_calibration --target_yaml target.yaml \
+    --camera_settings ../../config/camera_settings_zed2i.yaml \
+    --session sessao_ruido.yaml --measure_static_noise 30
 ```
 
+Meça com os mesmos controles de câmera da captura: com a exposição automática, o deslocamento
+medido saiu ~60 % maior (mediana 0,52 contra 0,32 px, alvo AprilGrid 5x7 a ~0,4 m, 2026-11-04).
 Até lá, os limiares de `static_capture` são provisórios.
 
 ## Cada captura
