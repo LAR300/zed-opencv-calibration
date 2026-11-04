@@ -106,16 +106,19 @@ brief.
 
 ## Critérios de aceitação
 
-- [ ] **IC95 %:** num conjunto conhecido (n = 10), o intervalo bate com o calculado à mão.
-- [ ] **Permutação:**
+> Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-03.
+
+- [x] **IC95 %:** num conjunto conhecido (n = 10), o intervalo bate com o calculado à mão.
+- [x] **Permutação:**
   - dois grupos sintéticos da mesma distribuição dão p uniforme em 200 repetições (teste de
     Kolmogorov–Smirnov, p > 0,01);
   - grupos com deslocamento claro dão p < 0,01;
   - a enumeração visita exatamente 184 756 atribuições (92 378 na variante simétrica).
-- [ ] **TOST:** médias iguais com n = 10 e σ pequeno diante de Δ declaram equivalência; uma diferença
+- [x] **TOST:** médias iguais com n = 10 e σ pequeno diante de Δ declaram equivalência; uma diferença
       maior que Δ não declara.
-- [ ] **Levene e F:** o grupo B com o dobro do desvio-padrão é detectado.
-- [ ] Um relatório completo é gerado para duas "condições" sintéticas de 10 calibrações cada.
+- [x] **Levene e F:** o grupo B com o dobro do desvio-padrão é detectado — pelo F com n = 10; pelo
+      Brown–Forsythe só com n = 20 (poder simulado no plano, etapa 5).
+- [x] Um relatório completo é gerado para duas "condições" sintéticas de 10 calibrações cada.
 
 ## Perguntas em aberto
 
