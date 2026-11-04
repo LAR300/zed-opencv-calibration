@@ -100,8 +100,9 @@ Os scripts descartáveis de `calib_runs/tools/` fazem parte disso, mas:
   Execução com `python3 -m zedcal.<comando> --config <yaml>`.
 - **Unidades:** mm para o alvo e para T; px para a imagem. Todo valor de erro traz a convenção no
   nome do campo, por exemplo `rms_per_corner_px` e `mse_per_coord_px2`.
-- **PnP:** `SOLVEPNP_IPPE` para o alvo inteiro e `SOLVEPNP_IPPE_SQUARE` para uma tag isolada;
-  depois `solvePnPRefineLM`. A ambiguidade de 2 soluções do PnP planar é resolvida pelo menor
+- **PnP:** `SOLVEPNP_IPPE`, pelo `solvePnPGeneric`, para o alvo inteiro e para uma tag isolada;
+  depois `solvePnPRefineLM`. O `IPPE_SQUARE` foi descartado na implementação porque exige um
+  referencial centrado na tag; o IPPE geral dá as mesmas duas soluções planares. A ambiguidade de 2 soluções do PnP planar é resolvida pelo menor
   resíduo (Hagemann, armadilha 5).
 
 ## Não-objetivos

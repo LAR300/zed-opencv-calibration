@@ -58,7 +58,16 @@
   - Testes primeiro: ida e volta sem perda; D 1×14 com zeros vira 8 coeficientes.
   - **Pronto quando:** `pytest` verde, e o checker carrega um YAML gravado pelo pacote (manual, na
     bancada).
-- [ ] 5. **Projeção, resíduos e PnP** (R9). Resíduos com sinal, por canto; pose livre (IPPE ou
+- [x] 5. **Projeção, resíduos e PnP** (R9). `zedcal/residuals.py`: `project`, `residuals` (com
+  sinal, x e y separados), `rms_per_corner`, `pose` e `right_pose`. Testes em
+  `tests/test_residuals.py` (28/28 no total).
+  - Desvio do spec: no lugar do `SOLVEPNP_IPPE_SQUARE`, `solvePnPGeneric` com `SOLVEPNP_IPPE`. O
+    IPPE_SQUARE exige os cantos num referencial centrado na tag e numa ordem própria. O IPPE geral
+    devolve as mesmas duas soluções do caso planar. A de menor resíduo é refinada com
+    `solvePnPRefineLM`, que é o que a armadilha 5 de Hagemann pede.
+  - No fisheye, o PnP roda nos pontos normalizados.
+
+  Especificação original da etapa: Resíduos com sinal, por canto; pose livre (IPPE ou
   IPPE_SQUARE + LM) e pose estéreo.
   - Testes primeiro: com dados sintéticos sem ruído, os resíduos são < 1e-9 px. Para uma tag
     isolada, a solução escolhida é a de menor resíduo entre as duas do IPPE.
