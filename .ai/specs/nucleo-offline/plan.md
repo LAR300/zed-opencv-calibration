@@ -11,7 +11,13 @@
 
 ## Etapas
 
-- [ ] 1. **Esqueleto** (condições de implementação). Criar `analysis/zedcal/`, `analysis/tests/` e
+- [x] 1. **Esqueleto** (condições de implementação). `analysis/zedcal/`, `analysis/tests/`,
+  `analysis/configs/`, `README.md` e `pytest.ini`. O `pytest.ini` desliga o plugin `anyio` do
+  container, que não carrega com o pytest 6.2.5. `tests/test_no_detection.py` falha se o pacote
+  usar `aruco`, `findChessboardCorners`, `detectMarkers` ou `findCirclesGrid`. Rodar com
+  `cd analysis && python3 -m pytest`.
+
+  Especificação original da etapa: Criar `analysis/zedcal/`, `analysis/tests/` e
   `analysis/configs/`, com `README.md` curto. Um teste verifica que nenhum módulo importa
   `cv2.aruco` nem usa `findChessboardCorners` (inspeção do código-fonte).
   - **Pronto quando:** `pytest` roda e esse teste passa.
