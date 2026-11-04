@@ -77,22 +77,59 @@
     `--recalibrate` com prior `none` dá o mesmo YAML que o `--use_stored_values` dessas imagens,
     até 1e-6 relativo; e uma segunda execução é recusada.
 
-- [ ] 4. **Prior configurável** (R1). No modo sessão, `calibrate()` recebe `use_intrinsic_prior`
+- [x] 4. **Prior configurável** (R1). No commit da etapa 3a.
+  - No modo sessão, o prior vem de `calibration.prior` (padrão `none`): com `none`, o chute inicial
+    da fábrica é descartado antes de calibrar.
+  - No `--recalibrate`, o prior `factory` vem da F exportada.
+
+  Verificado: a regressão do xadrez é idêntica, e a sessão coincide com o `--use_stored_values`
+  (diferença 0).
+
+  Especificação original da etapa: No modo sessão, `calibrate()` recebe `use_intrinsic_prior`
   da sessão, com padrão `none`. Fora do modo sessão, nada muda.
   - **Pronto quando:** a regressão do xadrez é idêntica, e a sessão com as imagens de
     `2026-11-03_camera_settings` coincide com o `--use_stored_values` até 1e-6 relativo.
-- [ ] 5. **Extended e registro das remoções** (R3, R5, R6).
+- [x] 5. **Extended e registro das remoções** (R3, R5, R6). No commit da etapa 3a.
+  - `calibrateCameraExtended` e `stereoCalibrateExtended` dão o mesmo resultado das chamadas
+    simples: o `--recalibrate` coincide com o `--use_stored_values` com diferença 0.
+  - **Remoção:** em `recalib_cs/captura_03`, a imagem direita do par 3 foi trocada pela do par 10.
+    O par saiu na etapa estéreo, com RMS de 574,7 px (limiar 70,7 px), junto com o `free_22`
+    (127,9 px). O relatório registra os dois, com etapa e erro, e a calibração foi recusada
+    (código 1, sem YAML).
+  - **Achado do algoritmo herdado**, que este spec não muda de propósito: depois da remoção
+    estéreo, as calibrações mono são refeitas a partir dos intrínsecos que o par ruim já tinha
+    distorcido, e o resultado ficou em 18 px. O código antigo faz o mesmo. Fica para o
+    `nucleo-offline` comparar com uma variante que recalibra do zero depois da rejeição.
+
+  Especificação original da etapa:
   - No modo sessão, a última calibração mono usa `calibrateCameraExtended`, e o estéreo usa
     `stereoCalibrateExtended`.
   - Os índices removidos em cada etapa de rejeição são guardados.
   - Fora do modo sessão, as chamadas atuais continuam.
   - **Pronto quando:** a regressão do xadrez é idêntica. Num teste de bancada, os K e D da sessão
     coincidem com os do caminho não-Extended até 1e-9 relativo, porque é a mesma otimização.
-- [ ] 6. **RMS fiel e aceite** (R3, R4). Calcula o RMS por câmera no ajuste estéreo e com pose livre
+- [x] 6. **RMS fiel e aceite** (R3, R4). No commit da etapa 3a. O aceite no modo sessão usa o RMS
+  do ajuste estéreo por câmera e o RMS estéreo.
+
+  Verificado com `calib_runs/tools/check_report_rms.py` (descartável), que recalcula os RMS a partir
+  do YAML e do `detections.json`: no `recalib_cs/captura_01`, o RMS com pose livre e o do ajuste
+  estéreo das duas câmeras batem com o relatório com diferença ≤ 8,8e-7 px.
+  - Medido nessa captura: etapa mono 0,305 / 0,310 px, ajuste estéreo 0,308 / 0,313 px, pose livre
+    0,305 / 0,310 px.
+  - O RMS que o relatório antigo chamava de "Left/Right" (etapa mono) é 0,003 px menor que o do
+    ajuste estéreo dos parâmetros gravados.
+
+  Especificação original da etapa: Calcula o RMS por câmera no ajuste estéreo e com pose livre
   (`solvePnP` com K e D finais). O aceite no modo sessão usa os valores do ajuste estéreo.
   - **Pronto quando:** um script Python independente, que lê o YAML e o `detections.json`,
     reproduz os dois RMS por câmera até 1e-4 px.
-- [ ] 7. **Arquivos na captura** (R7). `calib_cpp_<modelo>.yml` e `.report.json` em
+- [x] 7. **Arquivos na captura** (R7). `calib_cpp_rational8.yml` e `.report.json` em
+  `captura_<XX>/`; o YAML só é gravado se a calibração for aceita, e o relatório sempre.
+
+  Verificado: o `zed_stereo_checker --calib_opencv recalib_cs/captura_01/calib_cpp_rational8.yml`
+  abre a câmera e registra a origem "OpenCV file" (`calib_runs/tools/bench_checker_load.sh`).
+
+  Especificação original da etapa: `calib_cpp_<modelo>.yml` e `.report.json` em
   `captura_<XX>/`; nada no diretório corrente.
   - **Pronto quando:** o `zed_stereo_checker --calib_opencv captura_<XX>/calib_cpp_rational8.yml`
     abre a câmera e mostra erros, e o relatório tem todos os campos.
