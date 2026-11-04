@@ -26,11 +26,33 @@
   - Testes primeiro: uma `sl::CalibrationParameters` montada à mão com Tx = 120 dá `T[0] = −120`;
     `disto[9] ≠ 0` é recusado.
   - **Pronto quando:** `ctest` verde e a regressão do xadrez é idêntica ao `baseline.yml`.
-- [ ] 2. **Ferramenta `zed_export_factory`** (R1, R2, R5). Abertura igual à da calibração, saída em
+- [x] 2. **Ferramenta `zed_export_factory`** (R1, R2, R5). Em `export_factory/`. A abertura da
+  câmera agora vem de `common/calib_io/zed_open.hpp` (`setCalibrationOpenParameters`), compartilhada
+  com o `zed_stereo_calibration`.
+  - A saída vai para `<raiz>/fabrica/SN<serial>/`: `calib_factory_<modelo>.yml`, `meta.json` (com
+    `"session": null`), a cópia do `SN<serial>.conf` e o `export.log`.
+  - Uma pasta existente com conteúdo é recusada (`prepareEmptyDir`, testado).
+  - `--expect_resolution WxH` para se a câmera abrir em outra resolução.
+
+  **Bancada (2026-11-03), S/N 35180697:**
+  - fx L 533,820, cy L 369,065 e `T[0] = −119,982` em 1280 × 720 @ 15 fps;
+  - a distorção é a do modelo racional, da seção `[LEFT_DISTO]` do `.conf` (k1 = −0,432559), e não
+    o k1/k2 de `[LEFT_CAM_HD]`;
+  - a segunda exportação é recusada e a pasta fica intacta;
+  - o `meta.json` está completo.
+
+  Especificação original da etapa: Abertura igual à da calibração, saída em
   `fabrica/SN<serial>/` e recusa de sobrescrever.
   - **Pronto quando:** na bancada, o arquivo da S/N 35180697 traz fx L 533,82, cy L 369,065 e
     `T[0] = −119,982`.
-- [ ] 3. **Ida e volta** (R4). `--verify` reabre com `optional_opencv_calibration_file` e compara.
+- [x] 3. **Ida e volta** (R4). `--verify` reabre a câmera com o arquivo gravado como
+  `optional_opencv_calibration_file` e compara os `calibration_parameters_raw` relidos com os
+  originais (`sameRawParameters`, 1e-4 relativo). `--verify_file <yml>` faz só essa comparação.
+
+  **Bancada:** passou na S/N 35180697. Uma cópia com fx L 1 % maior falhou com
+  `left.fx: 533.82 vs 539.158`, código 1.
+
+  Especificação original da etapa: `--verify` reabre com `optional_opencv_calibration_file` e compara.
   - **Pronto quando:** a verificação passa na S/N 35180697. Uma cópia do YAML com fx alterado em 1 %
     faz a verificação falhar, como prova de que ela detecta divergência.
 - [ ] 4. **Checker com F** (critério 3). Com a câmera parada diante do alvo, rodar o checker com a

@@ -117,7 +117,10 @@ bool writeCaptureMeta(const std::string& path, const CaptureMeta& m, std::string
     fs << "}";
     fs << "host" << "{" << "hostname" << m.hostname << "}";
     writeBool(fs, "self_calibration_disabled", m.self_calibration_disabled);
-    writeSession(fs, m.session);
+    if (m.has_session)
+      writeSession(fs, m.session);
+    else
+      fs << "session" << kNull;
     fs << "camera_settings" << "{";
     writeSettings(fs, "start", m.camera_settings_start);
     writeSettings(fs, "end", m.camera_settings_end);

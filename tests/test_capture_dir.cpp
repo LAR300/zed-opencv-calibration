@@ -101,3 +101,21 @@ TEST(capture_dir_image_names_reject_bad_input) {
   CHECK(!relativeImagePath("left", "free", -1, rel, error));
   CHECK(contains(error, "index"));
 }
+
+TEST(empty_dir_is_created_without_sides) {
+  const fs::path dir = freshPath("fabrica/SN1");
+  std::string error;
+  CHECK(prepareEmptyDir(dir.string(), error));
+  CHECK(fs::is_directory(dir));
+  CHECK(fs::is_empty(dir));
+}
+
+TEST(empty_dir_refuses_existing_content) {
+  const fs::path dir = freshPath("fabrica/SN2");
+  fs::create_directories(dir);
+  std::ofstream(dir / "calib_factory_rational8.yml") << "x";
+  std::string error;
+  CHECK(!prepareEmptyDir(dir.string(), error));
+  CHECK(contains(error, "not empty"));
+  CHECK(fs::exists(dir / "calib_factory_rational8.yml"));
+}

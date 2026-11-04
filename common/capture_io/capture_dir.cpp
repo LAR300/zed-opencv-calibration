@@ -5,6 +5,29 @@
 
 namespace fs = std::filesystem;
 
+bool prepareEmptyDir(const std::string& dir, std::string& error) {
+  error.clear();
+  const fs::path path(dir);
+  std::error_code ec;
+  if (fs::exists(path, ec)) {
+    if (!fs::is_directory(path, ec)) {
+      error = "The output path '" + dir + "' exists and is not a folder";
+      return false;
+    }
+    if (!fs::is_empty(path, ec)) {
+      error = "The output folder '" + dir + "' is not empty: it is never overwritten";
+      return false;
+    }
+    return true;
+  }
+  fs::create_directories(path, ec);
+  if (ec) {
+    error = "Cannot create '" + dir + "': " + ec.message();
+    return false;
+  }
+  return true;
+}
+
 bool prepareCaptureDir(const std::string& dir, std::string& error) {
   error.clear();
   const fs::path path(dir);

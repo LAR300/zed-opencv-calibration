@@ -19,6 +19,7 @@
 #include "sample_limits.hpp"
 #include "session.hpp"
 #include "zed_camera_settings.hpp"
+#include "zed_open.hpp"
 
 static_assert(MIN_CALIBRATION_SAMPLES == MIN_IMAGE,
               "sample_limits.hpp must match the calibration minimum");
@@ -481,14 +482,9 @@ int main(int argc, char* argv[]) {
     // ZED Camera initialization
     sl::Camera zed_camera;
     sl::InitParameters init_params;
-    init_params.depth_mode =
-        sl::DEPTH_MODE::NONE;  // No depth required for calibration
-    init_params.camera_resolution =
-        sl::RESOLUTION::AUTO;     // Use the camera's native resolution
-    init_params.camera_fps = 15;  // Set the camera FPS
-    init_params.enable_image_validity_check =
-        false;  // Disable image validity check for performance
-    init_params.camera_disable_self_calib = true;
+    // Resolution, fps, no depth, no self-calibration: shared with
+    // zed_export_factory (common/calib_io/zed_open.hpp)
+    setCalibrationOpenParameters(init_params);
     init_params.sdk_verbose = sdk_verbose;
 
     // Configure the Virtual Stereo Camera if '--virtual' argument is provided

@@ -44,6 +44,7 @@ struct CaptureMeta {
   bool code_dirty = false;
   std::string hostname;
   bool self_calibration_disabled = true;
+  bool has_session = true;  // false: "session": null (e.g. zed_export_factory)
   Session session;
   std::vector<std::pair<std::string, int>> camera_settings_start;
   std::vector<std::pair<std::string, int>> camera_settings_end;

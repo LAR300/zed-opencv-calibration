@@ -6,6 +6,10 @@
 
 #include <string>
 
+// Create <dir> if needed. Refuses, without creating anything, when <dir>
+// exists and is not an empty folder.
+bool prepareEmptyDir(const std::string& dir, std::string& error);
+
 // Create <dir>/left and <dir>/right. Refuses, without creating anything, when
 // <dir> exists and is not an empty folder.
 bool prepareCaptureDir(const std::string& dir, std::string& error);

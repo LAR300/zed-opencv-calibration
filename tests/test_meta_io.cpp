@@ -175,3 +175,14 @@ TEST(meta_leaves_a_python_check_file) {
   CHECK(writeCaptureMeta((fs::temp_directory_path() / "zedcal_meta_check.json").string(),
                          m, error));
 }
+
+TEST(meta_without_session_writes_null) {
+  CaptureMeta m = sampleMeta();
+  m.has_session = false;
+  const fs::path path = freshFile("meta.json");
+  std::string error;
+  CHECK(writeCaptureMeta(path.string(), m, error));
+  const std::string text = readAll(path);
+  CHECK(contains(text, "\"session\": null"));
+  CHECK(!contains(text, "\"condition\""));
+}
