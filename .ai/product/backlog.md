@@ -17,6 +17,25 @@
 > com os achados de [`../auditoria.md`](../auditoria.md) (§8); os riscos citados como "risco N"
 > são os da §6 da auditoria.
 
+## Status em 2026-11-09
+
+Fase 2 (implementação) concluída no software: todos os módulos de E1–E4 estão implementados e
+testados (C++ 174 testes, Python 116), e marcados `[x]` abaixo quando o que falta é só bancada ou
+decisão do usuário. O que falta para a fase 3 está em [`pendencias-bancada.md`](pendencias-bancada.md);
+a documentação de uso, em [`../docs/`](../docs/README.md).
+
+| Item | Software | Falta |
+|---|---|---|
+| ambiente-sensores | Pronto | Instalar a regra udev no host (sudo) |
+| diagnostico-vies-aprilgrid | Diagnóstico offline feito: o viés vem do alvo impresso | Decidir o alvo; medir largura × altura e planicidade |
+| roteiro-poses | Pronto | Captura das 63 poses com o alvo; decidir a faixa "perto" |
+| captura-estatica | Pronto | Limiares com o alvo do laboratório em P, M e L |
+| cobertura | Pronto | Decidir o N mínimo |
+| aquecimento-termico | Pronto | 3 registros a frio |
+| analise-estatistica | Pronto | Aprovar margens e α |
+| validacao-metrica | Pronto | Sessão métrica; instrumentos de medida |
+| experimentos | Spec e plano prontos | Execução (fase 3) |
+
 ## Sequência e portões
 
 ```
@@ -72,7 +91,7 @@ Por que esta ordem:
     RMS²/2. A autocalibração fica ativa só no `stereo_reprojection_viewer`. As ferramentas mono são
     para ZED X One.
 
-- [ ] **ambiente-sensores** — Acesso permanente ao ZED SDK e ao HID da câmera
+- [x] **ambiente-sensores** — Acesso permanente ao ZED SDK e ao HID da câmera
   - Valor: alto · Esforço: P · MVP: sim
   - Depende de: —
   - O `admin` precisa entrar no grupo `zed` pelo `entrypoint_additions/`, e o host (o notebook da bancada) precisa de uma
@@ -121,7 +140,7 @@ Por que esta ordem:
     mas K e D salvos vêm do `stereoCalibrate` (risco 3).
   - **Erro por vista e desvios-padrão** (versões Extended), num arquivo ao lado do YAML.
   - **Metadados num arquivo ao lado do YAML.** O YAML lido pelo SDK não muda.
-  - **Regressão:** sem as flags novas, o recálculo de `calib_runs/regress_chess/` dá o mesmo
+  - **Regressão:** sem as flags novas, o recálculo de `calib_runs/regressao/xadrez/` dá o mesmo
     resultado (`.ai/docs/bench.md`).
 
 - [x] **nucleo-offline** — Pacote Python: leitura dos dados, calibração offline e dados sintéticos
@@ -134,7 +153,7 @@ Por que esta ordem:
     - gera alvos e câmeras sintéticos, com ruído e viés controlados, para os testes;
     - lê a configuração de cada análise de um YAML.
   - **Não detecta cantos em Python.** Só lê os `detections.json` produzidos pelo detector C++. Os
-    scripts de `calib_runs/tools/` detectam em Python, sem o refino D11, e não devem ser reusados
+    scripts descartáveis do diagnóstico (já apagados) detectavam em Python, sem o refino D11
     (risco 6).
   - **Calibração por câmera com todas as tags daquela câmera;** estéreo com as tags comuns. Usa as
     versões Extended (erro por vista e desvios-padrão).
@@ -194,7 +213,7 @@ Por que esta ordem:
   - **Na bancada:** medir a planicidade do alvo; fazer uma captura com o roteiro v1 (inclinações nos
     dois eixos e alvo girado); fazer uma captura de xadrez com as mesmas poses; comparar BR e fy/fx.
 
-- [ ] **roteiro-poses** — Roteiro fixo de 63 poses com IDs (R2)
+- [x] **roteiro-poses** — Roteiro fixo de 63 poses com IDs (R2)
   - Valor: alto · Esforço: G · MVP: sim
   - Depende de: persistencia-captura
   - **O roteiro é um YAML com quatro blocos:**
@@ -216,7 +235,7 @@ Por que esta ordem:
     pontos do bloco 4 só valem para a calibração de cada câmera se as detecções forem por câmera
     (ver persistencia-captura).
 
-- [ ] **captura-estatica** — Aceitar só quadros parados e nítidos (R2, rolling shutter)
+- [x] **captura-estatica** — Aceitar só quadros parados e nítidos (R2, rolling shutter)
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: roteiro-poses
   - O alvo deve ficar parado ~1 s, medido pelo deslocamento dos cantos entre quadros
@@ -225,7 +244,7 @@ Por que esta ordem:
     nítido passa no teste com o alvo borrado (risco 7). A nitidez passa a ser medida só na região do
     alvo.
 
-- [ ] **cobertura** — Verificação de cobertura antes de calibrar (R3)
+- [x] **cobertura** — Verificação de cobertura antes de calibrar (R3)
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: nucleo-offline
   - **Grade 8×8 por câmera**, com um mínimo de N cantos por célula, inclusive nos cantos da
@@ -236,7 +255,7 @@ Por que esta ordem:
   - **Relatório por captura, aprovada ou reprovada.** Uma captura reprovada é refeita.
   - N é derivado das capturas existentes e confirmado com o usuário.
 
-- [ ] **aquecimento-termico** — Medir o tempo até o regime térmico
+- [x] **aquecimento-termico** — Medir o tempo até o regime térmico
   - Valor: médio · Esforço: P · MVP: sim
   - Depende de: ambiente-sensores, persistencia-captura
   - Registra a temperatura `ONBOARD_*` e um parâmetro sensível ao longo do tempo, desde a câmera
@@ -265,7 +284,7 @@ Por que esta ordem:
   - Inclui a diferença de cx entre esquerda e direita após a retificação, que gera viés de
     disparidade (R5).
 
-- [ ] **analise-estatistica** — R6: estatística por condição e relatório comparativo
+- [x] **analise-estatistica** — R6: estatística por condição e relatório comparativo
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: erro-mapeamento, validacao-cruzada, metricas-tarefa
   - **Por condição:** média, IC95 % (t de Student, n = 10) e CV.
@@ -278,7 +297,7 @@ Por que esta ordem:
   - **A margem do TOST** sai de ΔZ/Z ≈ Δf/f + ΔB/B e da faixa do SLAM (até 3 m). Ela é proposta e só fixada
     depois de perguntar ao usuário.
 
-- [ ] **validacao-metrica** — R7: teste métrico em distâncias conhecidas
+- [x] **validacao-metrica** — R7: teste métrico em distâncias conhecidas
   - Valor: alto · Esforço: M · MVP: sim
   - Depende de: metricas-tarefa
   - Em cada distância, ajustada à faixa do SLAM, captura 5 pares com o alvo no centro e 4 com ele

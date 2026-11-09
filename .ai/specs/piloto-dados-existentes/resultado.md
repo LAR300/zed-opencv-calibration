@@ -3,7 +3,10 @@
 > Spec: [`spec.md`](spec.md). Rodado em 2026-11-03 com `analysis/piloto/run_piloto.py` sobre
 > `calib_runs/piloto/` (detecções exportadas das quatro capturas e F da S/N 35180697). As saídas
 > completas, com calibrações, relatórios, mapas de resíduos e `summary.json`, estão em
-> `calib_runs/piloto/resultados/`. Todas as calibrações são `rational8` em HD720. Nenhuma pasta
+> `calib_runs/piloto/resultados/`. **Essa pasta foi apagada na limpeza de 2026-11-09:** para refazer, exporte
+> as detecções das capturas (`analysis/exemplos/preparar.sh` ou `fluxo-coleta.md`, "Calibrar sem a
+> câmera"), monte `<piloto>/<captura>/detections.json` e `<piloto>/fabrica/SN35180697/` (a F está em
+> `calib_runs/dados/fabrica/`) e rode `analysis/piloto/run_piloto.py`. Todas as calibrações são `rational8` em HD720. Nenhuma pasta
 > original foi alterada (md5 conferido).
 
 ## Base

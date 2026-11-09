@@ -42,7 +42,7 @@ e a leitura das três temperaturas pelo `zed_access_check` (compile antes:
 - **Com `--session`, nada é apagado.** A captura vai para
   `calib_runs/dados/<condicao>/captura_<XX>/`, e uma pasta já usada é recusada antes de abrir a
   câmera: troque o número da captura no arquivo de sessão. Testes ficam fora de `dados/`, em
-  `calib_runs/testes_persistencia/`.
+  `calib_runs/testes/`; análises, em `calib_runs/analises/`.
 - **Calibração de fábrica (F):** `zed_export_factory --output_root <dados> --verify
   --expect_resolution 1280x720` grava `dados/fabrica/SN<serial>/`. Rode uma vez por câmera; a câmera
   do robô tem outro serial e outra F. A distorção que o SDK entrega é a do modelo racional, a seção
@@ -58,29 +58,37 @@ e a leitura das três temperaturas pelo `zed_access_check` (compile antes:
 - **Só execute um binário depois de confirmar que a compilação passou.** Um build quebrado deixa o
   binário antigo no lugar. Ele ignora as flags novas e abre a câmera e a janela, como aconteceu em
   2026-11-03 com os testes de erro do `--min_samples`.
-- **Regressão do xadrez:** `calib_runs/regress_chess/` tem `baseline.log` e `baseline.yml`. Depois
-  de qualquer mudança em `stereo_calibration/`, rode
-  `zed_stereo_calibration --use_stored_values --square_size 23.8` nessa pasta e compare com `diff`
-  e `cmp`.
+- **Regressão do xadrez:** `calib_runs/regressao/xadrez/` tem `baseline.log`, `baseline.yml` e um
+  link `zed-images` para as imagens de `2026-10-16_ar_9x6`. Depois de qualquer mudança em
+  `stereo_calibration/`, rode `zed_stereo_calibration --use_stored_values --square_size 23.8` nessa
+  pasta, compare o `zed_calibration_0.yml` com `cmp` e o log com `diff`, e apague o
+  `zed_calibration_0.yml` gerado.
+- **Paridade Python × C++:** `calib_runs/regressao/sessao_captura_01/` é uma captura de sessão
+  (25 pares) que `analysis/tests/test_calib*.py` recalibra e compara com o YAML do C++. Sem essa
+  pasta, esses testes são pulados (`pytest -rs` mostra).
+- **Utilitários de bancada** (`scripts/dev/`): compile com `scripts/dev/build.sh` no container; os
+  binários vão para `build/dev/`.
 - **O estado dos controles da câmera** pode ser lido sem alterar nada com
-  `calib_runs/tools/read_video_settings`.
+  `build/dev/read_video_settings`.
 - **Testar uma captura com sessão sem tocar no teclado:**
-  `calib_runs/tools/bench_session_capture.sh <condicao> <captura> <toques>` roda a ferramenta num
-  `Xvfb :98` próprio, aperta `s` o número de vezes pedido (com `calib_runs/tools/sendkey`, via XTest)
-  e depois `q`. `calib_runs/tools/check_detections <captura> <target.yaml>` detecta os PNGs de novo
+  `scripts/dev/bench_session_capture.sh <condicao> <captura> <toques>` roda a ferramenta num
+  `Xvfb :98` próprio, aperta `s` o número de vezes pedido (com `build/dev/sendkey`, via XTest) e
+  depois `q`; grava em `calib_runs/testes/` (ou `$ZED_TEST_ROOT`), com o alvo de
+  `config/aprilgrid_6x6_88mm.yaml` (ou `$ZED_TARGET`). `build/dev/check_detections <captura>
+  <target.yaml>` detecta os PNGs de novo
   e compara com o `detections.json`. Com o alvo parado, só o primeiro par passa no filtro de
   dissimilaridade.
 - **O `FILE(GLOB ...)` do CMake só lista os arquivos na configuração.** Depois de criar um `.cpp`
   novo, rode `cmake ..` antes do `make`, senão o link falha com "undefined reference".
 - **Testes unitários:** `cmake -S tests -B build/unit_tests && make -C build/unit_tests &&
   build/unit_tests/aprilgrid_tests`, no container, como `admin`.
-- **Erros do checker sem janela:** `calib_runs/tools/checker_errors <target.yaml> <quadros>
+- **Erros do checker sem janela:** `build/dev/checker_errors <target.yaml> <quadros>
   [calib.yml|internal] [pasta_zed-images/]` calcula os mesmos erros do `zed_stereo_checker`
   (esquerda, direita, estéreo), ao vivo ou nos pares gravados, e imprime a mediana e o IQR.
 - **Recalcular uma captura de sessão sem a câmera:** `zed_stereo_calibration --target_yaml
   <target.yaml> --recalibrate <captura_XX>`. Para testar com uma rodada antiga,
-  `calib_runs/tools/make_session_capture.py` monta uma captura de sessão a partir do `zed-images/` e
+  `scripts/dev/make_session_capture.py` monta uma captura de sessão a partir do `zed-images/` e
   do `detections.json` exportado, copiando as imagens sem tocar na original.
-  `calib_runs/tools/check_report_rms.py <captura>` recalcula em Python os RMS do relatório.
-- **O checker abre com um arquivo de calibração?** `calib_runs/tools/bench_checker_load.sh <calib.yml>`
+  `scripts/dev/check_report_rms.py <captura>` recalcula em Python os RMS do relatório.
+- **O checker abre com um arquivo de calibração?** `scripts/dev/bench_checker_load.sh <calib.yml>`
   roda o `zed_stereo_checker --calib_opencv` num `Xvfb :98` por alguns segundos. Não precisa do alvo.

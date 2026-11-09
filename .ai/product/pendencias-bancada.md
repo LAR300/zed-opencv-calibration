@@ -33,7 +33,12 @@
 
 ## roteiro-poses
 
-- [ ] **Modo roteiro com o alvo** (plan, etapas 4–5; implementado em 2026-11-04): as 9 poses do
+- [ ] **Modo roteiro com o alvo** (plan, etapas 4–5; implementado em 2026-11-04). Primeira tentativa
+      em 2026-11-04, com um AprilGrid 5×7 de 45 mm (26 × 37 cm) e uma variante do roteiro com
+      +90° de rotação: o painel mediu a pose (rotação 4° com o alvo em pé, inclinações, distância
+      0,55 m) e recusou o `s` com os motivos certos; nenhum par salvo. Aprendido: o contorno amarelo
+      cortado nas poses de borda confundiu o operador (explicado em `fluxo-coleta.md`), e com um alvo
+      pequeno as poses "perto" nos cantos não chegam a 12 tags nas duas câmeras. Falta: as 9 poses do
       bloco 1 "perto" salvas com os ids certos; uma pose do bloco 3 a 90° salva logo depois da de
       0°; `o` salvando com `out_of_tolerance: true`; conferir no painel se as grandezas medidas
       batem com o que se vê (sinais das inclinações e da rotação).
@@ -45,6 +50,10 @@
 - [ ] **`--measure_static_noise 30`** (plan, etapa 4; implementado): com o alvo parado, nas
       distâncias P, M e L, e trocar os limiares provisórios de `config/session_example.yaml`
       (1,0 s, 0,5 px, nitidez 0) pelos propostos no `noise.json`, revistos.
+      - **Feito em parte em 2026-11-04**, com um AprilGrid 5×7 de 45 mm a ~0,4 m: com os controles
+        fixos (`--camera_settings`), deslocamento p50 0,32 px e p95 0,50 px, nitidez mínima
+        proposta 1428; com a exposição automática, p50 0,52 e p95 0,78 px. Falta medir com o alvo
+        do laboratório nas três distâncias.
 - [ ] **Integração na coleta com o alvo** (plan, etapa 5): no modo roteiro, o bloqueio do `s`
       até a imobilidade, com os limiares medidos na etapa 4.
 
@@ -74,7 +83,10 @@
 
 ## ambiente-sensores
 
-- [ ] **Instalar a regra udev no host** (`scripts/bench/install_zed_udev.sh`, pede `sudo`),
+- [ ] **Instalar a regra udev no host** (`scripts/bench/install_zed_udev.sh`, pede `sudo`). Em
+      2026-11-04 o `--check` no host passou em tudo menos na regra (HID `0666` sem regra, perde-se
+      ao reconectar); o mesmo script dentro do container falha com "container not running", porque
+      roda no host. Depois de instalar,
       reconectar a câmera e rodar `scripts/bench/check_zed_access.sh --check`; uma segunda
       instalação não deve mudar nada (plan, etapa 2).
 - [ ] **Recriar o container** e conferir que o `--check` reprova o SDK e que

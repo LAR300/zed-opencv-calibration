@@ -315,8 +315,10 @@ long exposure blurs a moving target. To keep the capture conditions constant, pa
 #### Traceable Capture (`--session`)
 
 For calibrations that must be compared, repeated or reprocessed later (with other models, or with a
-refractive model under water), a session file makes every capture self-contained. The step-by-step workflow, in Portuguese, with an example session, is in
-[`.ai/docs/fluxo-calibracao.md`](.ai/docs/fluxo-calibracao.md).
+refractive model under water), a session file makes every capture self-contained. The workflow, in
+Portuguese, is in [`.ai/docs/`](.ai/docs/README.md): the overview (`fluxo-calibracao.md`), the
+collection (`fluxo-coleta.md`), the offline analysis with a worked example (`fluxo-analise-offline.md`)
+and every feature and metric with its references (`funcionalidades.md`).
 
 ```bash
 ./zed_stereo_calibration --target_yaml target.yaml --camera_settings ../../config/camera_settings_zed2i.yaml \
@@ -432,7 +434,9 @@ statistical checks with `ZEDCAL_SLOW=1`).
 | `metric_test_command` | metric test at known distances, with the common offset d0 |
 | `thermal_command` | warm-up curves and the proposed warm-up time |
 
-Specs, results and decisions are in `.ai/specs/`; the bench notes in `.ai/docs/bench.md`.
+A worked example on the recorded captures, with how to read every output, is in
+`analysis/exemplos/` and `.ai/docs/fluxo-analise-offline.md`. Specs, results and decisions are in
+`.ai/specs/`; the bench notes in `.ai/docs/bench.md`.
 
 #### Calibration Process
 
