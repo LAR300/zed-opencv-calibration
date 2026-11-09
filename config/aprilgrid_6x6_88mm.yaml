@@ -1,0 +1,9 @@
+# Kalibr AprilGrid of the lab: 6 x 6 tags tag36h11, 88 mm, spacing 26.4 mm (ratio 0.3),
+# 660 x 660 mm. Tag size and spacing measured by the user on 2026-10-20 (.ai/specs/aprilgrid-target/
+# scratch.md). The offline diagnosis of 2026-11-04 points to ~0.23 % stretch along Y and corners
+# ~0.4 mm off the grid (.ai/specs/piloto-dados-existentes/resultado.md): measure width x height.
+target_type: 'aprilgrid'
+tagCols: 6
+tagRows: 6
+tagSize: 0.088
+tagSpacing: 0.3
