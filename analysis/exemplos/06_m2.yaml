@@ -1,0 +1,11 @@
+# Passo 7: M2 entre as calibrações das 3 capturas no ar (v1, v2, controles) e F
+calibrations:
+  - /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v1/zed_calibration_0.yml
+  - /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/zed_calibration_0.yml
+  - /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/controles/zed_calibration_0.yml
+factory: /workspaces/isaac_ros-dev/dev/calib_runs/dados/fabrica/SN35180697/calib_factory_rational8.yml
+detections:
+  - /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v1/detections.json
+  - /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/detections.json
+  - /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/controles/detections.json
+output_dir: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/saida/06_m2

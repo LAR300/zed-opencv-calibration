@@ -1,0 +1,7 @@
+# Passo 2: a calibração da v2 refeita em Python a partir do detections.json; deve reproduzir a do C++.
+detections: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/detections.json
+output_dir: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/saida/01_calibrate_v2
+model: rational8
+variants:
+  - {mono_points: common, stereo: joint, rejection: cpp}   # os mesmos passos da ferramenta C++
+bootstrap: {n: 0, seed: 0}

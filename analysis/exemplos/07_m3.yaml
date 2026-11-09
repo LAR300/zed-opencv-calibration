@@ -1,0 +1,11 @@
+# Passo 8: M3, cada calibração nas capturas que ela não usou; a captura com acrílico como contraste
+captures:
+  - {name: v1, detections: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v1/detections.json, calibration: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v1/zed_calibration_0.yml}
+  - {name: v2, detections: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/detections.json, calibration: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/zed_calibration_0.yml}
+  - {name: controles, detections: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/controles/detections.json, calibration: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/controles/zed_calibration_0.yml}
+extra_calibrations:
+  F: /workspaces/isaac_ros-dev/dev/calib_runs/dados/fabrica/SN35180697/calib_factory_rational8.yml
+  acrilico: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/acrilico/zed_calibration_0.yml
+other_captures:
+  - {name: acrilico, detections: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/acrilico/detections.json}
+output_dir: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/saida/07_m3

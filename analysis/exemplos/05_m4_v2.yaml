@@ -1,0 +1,9 @@
+# Passo 6: métricas da tarefa na v2 (epipolar, escala, plano, viés de disparidade), própria x F
+captures:
+  - {name: v2, detections: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/detections.json}
+calibrations:
+  F: /workspaces/isaac_ros-dev/dev/calib_runs/dados/fabrica/SN35180697/calib_factory_rational8.yml
+  propria: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/zed_calibration_0.yml
+reference_calibration: F
+target_measured: {tag_size_mm: 88.0, tag_spacing_mm: 26.4}   # capturas antigas: sem meta.json
+output_dir: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/saida/05_m4_v2

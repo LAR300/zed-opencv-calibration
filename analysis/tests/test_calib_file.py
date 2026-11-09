@@ -73,7 +73,7 @@ def test_refuses_terms_beyond_the_eighth(tmp_path):
 
 def test_reads_the_cpp_file():
     # Written by zed_stereo_calibration --recalibrate (bench data, if present)
-    path = ("/workspaces/isaac_ros-dev/dev/calib_runs/testes_persistencia/recalib_cs/captura_01/"
+    path = ("/workspaces/isaac_ros-dev/dev/calib_runs/regressao/sessao_captura_01/"
             "calib_cpp_rational8.yml")
     try:
         c = read_calibration(path)

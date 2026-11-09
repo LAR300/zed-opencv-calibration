@@ -1,0 +1,4 @@
+# Passo 4: M1 (RMS, mapa de resíduos, Bias Ratio) da calibração da própria v2
+detections: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/detections.json
+calibration: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/zed_calibration_0.yml
+output_dir: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/saida/03_m1_v2_propria

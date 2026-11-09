@@ -1,0 +1,14 @@
+# Passo 9: estatística da "condição" ar (v1, v2, controles). Só ilustração: o protocolo pede 10
+# capturas por condição, feitas com o roteiro.
+conditions:
+  ar:
+    calibrations:
+      v1: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v1/zed_calibration_0.yml
+      v2: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/zed_calibration_0.yml
+      controles: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/controles/zed_calibration_0.yml
+    detections:
+      - /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v1/detections.json
+      - /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/detections.json
+      - /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/controles/detections.json
+factory: /workspaces/isaac_ros-dev/dev/calib_runs/dados/fabrica/SN35180697/calib_factory_rational8.yml
+output_dir: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/saida/08_relatorio

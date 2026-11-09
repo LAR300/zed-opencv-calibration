@@ -1,0 +1,4 @@
+# Passo 5: M1 da calibração de fábrica F nas mesmas imagens da v2
+detections: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/v2/detections.json
+calibration: /workspaces/isaac_ros-dev/dev/calib_runs/dados/fabrica/SN35180697/calib_factory_rational8.yml
+output_dir: /workspaces/isaac_ros-dev/dev/calib_runs/analises/exemplo/saida/04_m1_v2_fabrica

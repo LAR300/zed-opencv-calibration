@@ -6,7 +6,7 @@ import pytest
 from zedcal import calib, io, synthetic
 from zedcal.calib_file import read_calibration
 
-BENCH = "/workspaces/isaac_ros-dev/dev/calib_runs/testes_persistencia/recalib_cs/captura_01"
+BENCH = "/workspaces/isaac_ros-dev/dev/calib_runs/regressao/sessao_captura_01"
 
 
 def synthetic_detections(tmp_path, n=30, sigma=0.0, seed=1, model="rational8", **kw):
