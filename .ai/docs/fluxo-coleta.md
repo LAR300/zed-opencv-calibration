@@ -169,6 +169,12 @@ cd $BIN/stereo_calibration
   4 com metade do alvo fora da imagem. As distâncias são frações da largura da imagem: perto
   70–80 %, médio 40–50 %, longe 20–25 %. Tolerâncias: 0,05 na fração, 0,08 na posição, 5° nos
   ângulos.
+- **Guia para imprimir ou abrir no navegador:** `config/roteiro_v1_guia.html` desenha as 63 poses
+  e tem uma lista para marcar por captura. Ela serve também para a sessão livre (`roteiro: null`),
+  em que a ferramenta não confere a pose: aí use `--min_samples 63 --max_samples 0` e termine com
+  `f`. No modo livre, o filtro de similaridade da ferramenta original tende a recusar as poses que
+  repetem a posição e o tamanho de outra (as rotações do bloco 3). Depois de mudar o roteiro, rode
+  `python3 config/make_roteiro_guia.py`.
 
 No fim do roteiro a ferramenta lista as poses salvas, fora da tolerância e puladas e, com pelo
 menos 20 pares, **calibra e mostra o RMS e os parâmetros, como antes**.

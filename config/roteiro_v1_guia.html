@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guia do roteiro</title>
+<!--
+  Guia de captura do roteiro v1: o desenho de cada pose e uma lista para marcar, por captura.
+  Os dados das poses vêm de config/roteiro_v1.yaml: depois de mudar o roteiro, rode
+  python3 config/make_roteiro_guia.py (reescreve só o bloco roteiro-data abaixo).
+  As marcações ficam no navegador (localStorage), uma lista por número de captura.
+-->
+<style>
+:root {
+  --bg: #f5f6f8; --surface: #ffffff; --ink: #1c2228; --muted: #5a6470; --line: #d4d9df;
+  --frame-bg: #e9edf1; --frame: #6f7b87; --grid: #b3bcc6; --board: #ffffff; --board-edge: #8f99a3;
+  --tag: #20262d; --tag0: #e46c0a; --accent: #2563c9;
+  --s: #1e7f45; --s-bg: #e2f3e8; --o: #9a6300; --o-bg: #fbefd6; --k: #5f6973; --k-bg: #e8ebee;
+  --warn: #9c4309; --warn-bg: #fdeee2;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181c; --surface: #1c2227; --ink: #e5e9ed; --muted: #9ba6b1; --line: #343d46;
+    --frame-bg: #262e35; --frame: #8d99a5; --grid: #4b5560; --board: #f1f3f5; --board-edge: #a4aeb8;
+    --tag: #1f252b; --tag0: #ff8a2a; --accent: #74a4ff;
+    --s: #5cc98a; --s-bg: #17352a; --o: #e3ad45; --o-bg: #3b2f14; --k: #a3adb7; --k-bg: #2a3138;
+    --warn: #f2a575; --warn-bg: #3b2519;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181c; --surface: #1c2227; --ink: #e5e9ed; --muted: #9ba6b1; --line: #343d46;
+  --frame-bg: #262e35; --frame: #8d99a5; --grid: #4b5560; --board: #f1f3f5; --board-edge: #a4aeb8;
+  --tag: #1f252b; --tag0: #ff8a2a; --accent: #74a4ff;
+  --s: #5cc98a; --s-bg: #17352a; --o: #e3ad45; --o-bg: #3b2f14; --k: #a3adb7; --k-bg: #2a3138;
+  --warn: #f2a575; --warn-bg: #3b2519;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.wrap { max-width: 1440px; margin: 0 auto; padding: 16px; }
+h1 { font-size: 1.35rem; margin: 0; }
+h2 { font-size: 1.1rem; margin: 0; }
+code, .mono { font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: .92em; }
+.top {
+  position: sticky; top: 0; z-index: 5; background: var(--bg);
+  border-bottom: 1px solid var(--line); padding: 12px 0 10px; margin-bottom: 12px;
+}
+.top-row { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; justify-content: space-between; }
+.sub { color: var(--muted); margin: 2px 0 0; font-size: .9rem; }
+.controls { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.controls label { display: flex; gap: 6px; align-items: center; font-size: .9rem; color: var(--muted); }
+input, select, textarea, button { font: inherit; color: var(--ink); }
+input[type=number] { width: 4.5em; }
+input, select, textarea {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px;
+}
+button {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 5px 10px; cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+.counts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pill { border-radius: 999px; padding: 2px 10px; font-size: .85rem; border: 1px solid var(--line); background: var(--surface); }
+.pill.s { color: var(--s); background: var(--s-bg); border-color: transparent; }
+.pill.o { color: var(--o); background: var(--o-bg); border-color: transparent; }
+.pill.k { color: var(--k); background: var(--k-bg); border-color: transparent; }
+details.help {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 14px; margin-bottom: 14px;
+}
+details.help summary { cursor: pointer; font-weight: 600; }
+.help-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 4px 28px; }
+.help ul { margin: 6px 0; padding-left: 20px; }
+.help li { margin: 3px 0; }
+.sw { display: inline-block; width: .9em; height: .9em; border-radius: 2px; vertical-align: -.1em; margin-right: 3px; }
+pre.cmd {
+  background: var(--frame-bg); border-radius: 6px; padding: 8px 10px; overflow-x: auto;
+  font-size: .82rem; margin: 6px 0;
+}
+section.block { margin: 18px 0 8px; }
+.block-head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; margin-bottom: 4px; }
+.block-head .bc { color: var(--muted); font-size: .88rem; }
+.block-text { color: var(--muted); margin: 0 0 10px; font-size: .92rem; max-width: 70em; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  padding: 8px 10px 10px; display: flex; flex-direction: column; gap: 4px;
+  break-inside: avoid; page-break-inside: avoid;
+}
+.card[data-state="s"] { border-color: var(--s); box-shadow: inset 4px 0 0 var(--s); }
+.card[data-state="o"] { border-color: var(--o); box-shadow: inset 4px 0 0 var(--o); }
+.card[data-state="k"] { border-color: var(--k); box-shadow: inset 4px 0 0 var(--k); opacity: .8; }
+.card-head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.card-head .num { color: var(--muted); font-size: .8rem; }
+.card-head code { font-weight: 700; }
+.state-label { font-size: .78rem; font-weight: 600; }
+.card[data-state="s"] .state-label { color: var(--s); }
+.card[data-state="o"] .state-label { color: var(--o); }
+.card[data-state="k"] .state-label { color: var(--k); }
+.card svg { width: 100%; height: auto; display: block; }
+.desc { margin: 0; font-weight: 600; font-size: .92rem; }
+.meta { margin: 0; color: var(--muted); font-size: .84rem; }
+.warn { margin: 2px 0 0; font-size: .8rem; color: var(--warn); background: var(--warn-bg); border-radius: 6px; padding: 3px 6px; }
+.keys { display: flex; gap: 6px; margin-top: 4px; }
+.keys button { flex: 1; padding: 4px 4px; font-size: .85rem; }
+.keys button[aria-pressed="true"][data-k="s"] { background: var(--s-bg); color: var(--s); border-color: var(--s); font-weight: 700; }
+.keys button[aria-pressed="true"][data-k="o"] { background: var(--o-bg); color: var(--o); border-color: var(--o); font-weight: 700; }
+.keys button[aria-pressed="true"][data-k="k"] { background: var(--k-bg); color: var(--k); border-color: var(--k); font-weight: 700; }
+.printbox { display: none; font-size: .85rem; color: var(--muted); }
+svg .img-bg { fill: var(--frame-bg); }
+svg .img-frame { fill: none; stroke: var(--frame); stroke-width: 1.4; vector-effect: non-scaling-stroke; }
+svg .img-grid { stroke: var(--grid); stroke-width: 1; stroke-dasharray: 4 4; vector-effect: non-scaling-stroke; }
+svg .board { fill: var(--board); stroke: var(--board-edge); stroke-width: 1; vector-effect: non-scaling-stroke; }
+svg .tags { fill: var(--tag); }
+svg .tag0 { fill: var(--tag0); }
+svg .ghost { opacity: .22; }
+svg .aim { stroke: var(--accent); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.bottom { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 20px; }
+.bottom label { display: block; font-weight: 600; margin-bottom: 4px; }
+.bottom textarea { width: 100%; min-height: 9em; resize: vertical; }
+.bottom .row { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+footer { color: var(--muted); font-size: .8rem; margin: 18px 0 4px; }
+@media (max-width: 560px) {
+  .grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .card { padding: 6px; }
+  .keys button { font-size: .78rem; }
+  .top { position: static; }
+}
+@media print {
+  @page { size: A4; margin: 10mm; }
+  body { background: #fff; color: #000; font-size: 10px; }
+  .wrap { padding: 0; max-width: none; }
+  .top { position: static; border: 0; padding: 0; margin-bottom: 4px; }
+  .controls, .keys, .bottom .row, details.help:not([open]) { display: none; }
+  details.help { border: 0; padding: 0; }
+  .grid { grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .card { padding: 4px 6px; border-color: #999; box-shadow: none !important; opacity: 1 !important; }
+  .printbox { display: block; color: #000; }
+  .warn { background: none; padding: 0; }
+  section.block { margin: 8px 0 2px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="top-row">
+    <div>
+      <h1>Guia do roteiro <span id="name" class="mono"></span></h1>
+      <p class="sub"><span id="total"></span> poses em 4 blocos · alvo <span id="target-desc"></span> · dados de <code id="src"></code></p>
+    </div>
+    <div class="controls">
+      <label>Captura nº <input id="cap" type="number" min="1" max="99" value="1"></label>
+      <label>Modo
+        <select id="mode">
+          <option value="livre">sessão livre (roteiro: null)</option>
+          <option value="roteiro">sessão com roteiro</option>
+        </select>
+      </label>
+      <button id="clear" type="button">Limpar esta captura</button>
+      <button id="print" type="button">Imprimir</button>
+    </div>
+  </div>
+  <div class="counts" id="counts"></div>
+</header>
+
+<details class="help" open>
+  <summary>Como usar e como ler o desenho</summary>
+  <div class="help-cols">
+    <div>
+      <ul>
+        <li><b>Uma lista por captura:</b> escolha o nº da captura (o mesmo <code>capture</code> da sessão).
+          As marcações ficam guardadas neste navegador.</li>
+        <li><b>Sessão livre</b> (<code>roteiro: null</code>): a ferramenta não confere a pose. Reproduza
+          o desenho e marque <b>salvo</b>, <b>recusado</b> (a ferramenta não aceitou o par) ou
+          <b>pulado</b>. Para a coleta não terminar sozinha antes da última pose:
+          <pre class="cmd">./zed_stereo_calibration --target_yaml $CFG/aprilgrid_6x6_88mm.yaml \
+    --camera_settings $CFG/camera_settings_zed2i.yaml \
+    --session $S/sessao_A_livre.yaml --min_samples 63 --max_samples 0</pre>
+          e termine com <code>f</code>, que calibra.</li>
+        <li><b>Sessão com roteiro:</b> a ferramenta já desenha a pose pedida. Use esta página como
+          lista: <b>s</b> salvo, <b>o</b> fora da tolerância, <b>k</b> pulado.</li>
+        <li>No fim, baixe o resumo e guarde-o na pasta da captura (<code>captura_XX/</code>).</li>
+      </ul>
+    </div>
+    <div>
+      <ul>
+        <li><span class="sw" style="background:var(--frame-bg);border:1px solid var(--frame)"></span>
+          O retângulo é a <b>imagem da câmera esquerda</b> (1280 × 720), com a grade 3 × 3 do roteiro;
+          o <b style="color:var(--accent)">+</b> é onde fica o centro do alvo.</li>
+        <li>O alvo aparece no tamanho e na posição em que deve ser visto. A parte <b>apagada</b> fica
+          fora da imagem: nas poses de perto isso é esperado.</li>
+        <li><span class="sw" style="background:var(--tag0)"></span> A tag laranja é a <b>tag 0</b>:
+          canto inferior esquerdo com o alvo em pé. Ela mostra a rotação.</li>
+        <li><b>Inclinações:</b> o lado que aparece menor é o mais longe da câmera. H+ = borda de cima
+          mais longe; V+ = borda direita mais longe.</li>
+        <li>Desenho sem a distorção da lente. Distâncias aproximadas, com f = 533,8 px (F) e o alvo
+          de <span id="board-mm"></span> mm.</li>
+      </ul>
+    </div>
+  </div>
+</details>
+
+<main id="blocks"></main>
+
+<div class="bottom">
+  <div>
+    <label for="note">Notas desta captura</label>
+    <textarea id="note" placeholder="Ex.: hora de início e fim, luz, quem moveu o alvo, problemas."></textarea>
+  </div>
+  <div>
+    <label for="summary">Resumo</label>
+    <textarea id="summary" readonly></textarea>
+    <div class="row">
+      <button id="download" type="button">Baixar resumo (.txt)</button>
+      <button id="copy" type="button">Copiar resumo</button>
+    </div>
+  </div>
+</div>
+
+<footer>Gerado de <code>config/roteiro_v1.yaml</code> por <code>config/make_roteiro_guia.py</code>.
+  Convenções dos ângulos em <code>common/pose_script/pose_script.hpp</code>.</footer>
+</div>
+
+<script id="roteiro-data" type="application/json">
+{"name":"roteiro_v1","source":"roteiro_v1.yaml","tolerances":{"fraction":0.05,"position":0.08,"angle_deg":5.0},"image":[1280,720],"target":{"tagCols":6,"tagRows":6,"tagSize":0.088,"tagSpacing":0.3,"file":"aprilgrid_6x6_88mm.yaml"},"poses":[{"id":"B1-P-TL","block":1,"fraction":[0.7,0.8],"center":[0.1667,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-P-TC","block":1,"fraction":[0.7,0.8],"center":[0.5,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-P-TR","block":1,"fraction":[0.7,0.8],"center":[0.8333,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-P-ML","block":1,"fraction":[0.7,0.8],"center":[0.1667,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-P-MC","block":1,"fraction":[0.7,0.8],"center":[0.5,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-P-MR","block":1,"fraction":[0.7,0.8],"center":[0.8333,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-P-BL","block":1,"fraction":[0.7,0.8],"center":[0.1667,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-P-BC","block":1,"fraction":[0.7,0.8],"center":[0.5,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-P-BR","block":1,"fraction":[0.7,0.8],"center":[0.8333,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-M-TL","block":1,"fraction":[0.4,0.5],"center":[0.1667,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-M-TC","block":1,"fraction":[0.4,0.5],"center":[0.5,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-M-TR","block":1,"fraction":[0.4,0.5],"center":[0.8333,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-M-ML","block":1,"fraction":[0.4,0.5],"center":[0.1667,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-M-MC","block":1,"fraction":[0.4,0.5],"center":[0.5,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-M-MR","block":1,"fraction":[0.4,0.5],"center":[0.8333,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-M-BL","block":1,"fraction":[0.4,0.5],"center":[0.1667,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-M-BC","block":1,"fraction":[0.4,0.5],"center":[0.5,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-M-BR","block":1,"fraction":[0.4,0.5],"center":[0.8333,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-L-TL","block":1,"fraction":[0.2,0.25],"center":[0.1667,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-L-TC","block":1,"fraction":[0.2,0.25],"center":[0.5,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-L-TR","block":1,"fraction":[0.2,0.25],"center":[0.8333,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-L-ML","block":1,"fraction":[0.2,0.25],"center":[0.1667,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-L-MC","block":1,"fraction":[0.2,0.25],"center":[0.5,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-L-MR","block":1,"fraction":[0.2,0.25],"center":[0.8333,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-L-BL","block":1,"fraction":[0.2,0.25],"center":[0.1667,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-L-BC","block":1,"fraction":[0.2,0.25],"center":[0.5,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B1-L-BR","block":1,"fraction":[0.2,0.25],"center":[0.8333,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-MC-Hp35","block":2,"fraction":[0.4,0.5],"center":[0.5,0.5],"tilt_h_deg":35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-MC-Hm35","block":2,"fraction":[0.4,0.5],"center":[0.5,0.5],"tilt_h_deg":-35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-MC-Vp35","block":2,"fraction":[0.4,0.5],"center":[0.5,0.5],"tilt_h_deg":0.0,"tilt_v_deg":35.0,"rotation_deg":0.0},{"id":"B2-M-MC-Vm35","block":2,"fraction":[0.4,0.5],"center":[0.5,0.5],"tilt_h_deg":0.0,"tilt_v_deg":-35.0,"rotation_deg":0.0},{"id":"B2-M-TL-Hp35","block":2,"fraction":[0.4,0.5],"center":[0.1667,0.1667],"tilt_h_deg":35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-TL-Hm35","block":2,"fraction":[0.4,0.5],"center":[0.1667,0.1667],"tilt_h_deg":-35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-TL-Vp35","block":2,"fraction":[0.4,0.5],"center":[0.1667,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":35.0,"rotation_deg":0.0},{"id":"B2-M-TL-Vm35","block":2,"fraction":[0.4,0.5],"center":[0.1667,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":-35.0,"rotation_deg":0.0},{"id":"B2-M-TR-Hp35","block":2,"fraction":[0.4,0.5],"center":[0.8333,0.1667],"tilt_h_deg":35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-TR-Hm35","block":2,"fraction":[0.4,0.5],"center":[0.8333,0.1667],"tilt_h_deg":-35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-TR-Vp35","block":2,"fraction":[0.4,0.5],"center":[0.8333,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":35.0,"rotation_deg":0.0},{"id":"B2-M-TR-Vm35","block":2,"fraction":[0.4,0.5],"center":[0.8333,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":-35.0,"rotation_deg":0.0},{"id":"B2-M-BL-Hp35","block":2,"fraction":[0.4,0.5],"center":[0.1667,0.8333],"tilt_h_deg":35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-BL-Hm35","block":2,"fraction":[0.4,0.5],"center":[0.1667,0.8333],"tilt_h_deg":-35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-BL-Vp35","block":2,"fraction":[0.4,0.5],"center":[0.1667,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":35.0,"rotation_deg":0.0},{"id":"B2-M-BL-Vm35","block":2,"fraction":[0.4,0.5],"center":[0.1667,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":-35.0,"rotation_deg":0.0},{"id":"B2-M-BR-Hp35","block":2,"fraction":[0.4,0.5],"center":[0.8333,0.8333],"tilt_h_deg":35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-BR-Hm35","block":2,"fraction":[0.4,0.5],"center":[0.8333,0.8333],"tilt_h_deg":-35.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B2-M-BR-Vp35","block":2,"fraction":[0.4,0.5],"center":[0.8333,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":35.0,"rotation_deg":0.0},{"id":"B2-M-BR-Vm35","block":2,"fraction":[0.4,0.5],"center":[0.8333,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":-35.0,"rotation_deg":0.0},{"id":"B3-P-MC-R000","block":3,"fraction":[0.7,0.8],"center":[0.5,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B3-P-MC-R090","block":3,"fraction":[0.7,0.8],"center":[0.5,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":90.0},{"id":"B3-P-MC-R180","block":3,"fraction":[0.7,0.8],"center":[0.5,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":180.0},{"id":"B3-P-MC-R270","block":3,"fraction":[0.7,0.8],"center":[0.5,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":270.0},{"id":"B3-P-TL-R000","block":3,"fraction":[0.7,0.8],"center":[0.1667,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B3-P-TL-R090","block":3,"fraction":[0.7,0.8],"center":[0.1667,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":90.0},{"id":"B3-P-TL-R180","block":3,"fraction":[0.7,0.8],"center":[0.1667,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":180.0},{"id":"B3-P-TL-R270","block":3,"fraction":[0.7,0.8],"center":[0.1667,0.1667],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":270.0},{"id":"B3-P-BR-R000","block":3,"fraction":[0.7,0.8],"center":[0.8333,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B3-P-BR-R090","block":3,"fraction":[0.7,0.8],"center":[0.8333,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":90.0},{"id":"B3-P-BR-R180","block":3,"fraction":[0.7,0.8],"center":[0.8333,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":180.0},{"id":"B3-P-BR-R270","block":3,"fraction":[0.7,0.8],"center":[0.8333,0.8333],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":270.0},{"id":"B4-P-EL","block":4,"fraction":[0.7,0.8],"center":[0.0,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B4-P-ER","block":4,"fraction":[0.7,0.8],"center":[1.0,0.5],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B4-P-ET","block":4,"fraction":[0.7,0.8],"center":[0.5,0.0],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0},{"id":"B4-P-EB","block":4,"fraction":[0.7,0.8],"center":[0.5,1.0],"tilt_h_deg":0.0,"tilt_v_deg":0.0,"rotation_deg":0.0}]}
+</script>
+<script>
+(function () {
+  'use strict';
+  var DATA = JSON.parse(document.getElementById('roteiro-data').textContent);
+  var IMG_W = DATA.image[0], IMG_H = DATA.image[1];
+  var CAM = { f: 533.8, cx: 632.1, cy: 369.1 };  // F do SN 35180697, só para o desenho
+  var MX = 300, MY = 380;                        // px mostrados fora da imagem (o resto é cortado)
+
+  var T = DATA.target;
+  var TAG = T.tagSize * 1000, GAP = TAG * T.tagSpacing;
+  var BW = T.tagCols * TAG + (T.tagCols - 1) * GAP;
+  var BH = T.tagRows * TAG + (T.tagRows - 1) * GAP;
+
+  var DIST = { P: 'Perto', M: 'Médio', L: 'Longe' };
+  var POS = {
+    TL: 'canto superior esquerdo', TC: 'em cima, no meio', TR: 'canto superior direito',
+    ML: 'à esquerda, na altura do meio', MC: 'no centro', MR: 'à direita, na altura do meio',
+    BL: 'canto inferior esquerdo', BC: 'embaixo, no meio', BR: 'canto inferior direito',
+    EL: 'centro na borda esquerda', ER: 'centro na borda direita',
+    ET: 'centro na borda de cima', EB: 'centro na borda de baixo'
+  };
+  var BLOCKS = {
+    1: ['Bloco 1 — de frente', '3 distâncias × 9 posições, com o alvo de frente para a câmera (inclinações 0 ± 5°).'],
+    2: ['Bloco 2 — inclinado', 'Distância média, ±35° em cada eixo (a ferramenta aceita 30–40°). A cobertura offline exige ±30° nos dois eixos: não pule este bloco.'],
+    3: ['Bloco 3 — girado', 'Perto, alvo girado 0/90/180/270° no sentido horário. Gire o alvo, não a câmera; a tag laranja mostra a orientação.'],
+    4: ['Bloco 4 — meio alvo fora', 'Perto, com o centro do alvo na borda da imagem: metade do alvo fica fora, de propósito.']
+  };
+  var LABELS = {
+    livre: { s: 'salvo', o: 'recusado', k: 'pulado' },
+    roteiro: { s: 's salvo', o: 'o fora', k: 'k pulado' }
+  };
+  var LONG = {
+    livre: { s: 'salvos', o: 'recusados', k: 'pulados' },
+    roteiro: { s: 'salvos (s)', o: 'fora da tolerância (o)', k: 'pulados (k)' }
+  };
+
+  function rad(d) { return d * Math.PI / 180; }
+  function fmt(x, n) { return x.toFixed(n).replace('.', ','); }
+  function signed(d) { return (d > 0 ? '+' : '−') + Math.abs(d); }
+
+  // Projection of the target in the pose: centre on the ray of the pose centre, at the distance
+  // of the middle of the fraction range; rotation in the target plane (clockwise in the image),
+  // then the tilts (H+: top edge farther; V+: right edge farther).
+  function geometry(p) {
+    var frac = (p.fraction[0] + p.fraction[1]) / 2;
+    var Z = CAM.f * BW / (frac * IMG_W);
+    var u0 = p.center[0] * IMG_W, v0 = p.center[1] * IMG_H;
+    var C = [(u0 - CAM.cx) * Z / CAM.f, (v0 - CAM.cy) * Z / CAM.f, Z];
+    var r = rad(p.rotation_deg), t = rad(p.tilt_h_deg), s = rad(p.tilt_v_deg);
+    function P(u, v) {
+      var u1 = u * Math.cos(r) - v * Math.sin(r), v1 = u * Math.sin(r) + v * Math.cos(r);
+      var X = C[0] + u1 * Math.cos(s), Y = C[1] + v1 * Math.cos(t);
+      var Zp = C[2] + u1 * Math.sin(s) - v1 * Math.sin(t);
+      return [CAM.cx + CAM.f * X / Zp, CAM.cy + CAM.f * Y / Zp];
+    }
+    function quad(u0_, v0_, u1_, v1_) { return [P(u0_, v0_), P(u1_, v0_), P(u1_, v1_), P(u0_, v1_)]; }
+    var m = 0.35 * TAG;
+    var tags = [];
+    for (var row = 0; row < T.tagRows; row++) {          // row 0 at the bottom (tag 0)
+      for (var col = 0; col < T.tagCols; col++) {
+        var ul = -BW / 2 + col * (TAG + GAP), vb = BH / 2 - row * (TAG + GAP);
+        tags.push(quad(ul, vb - TAG, ul + TAG, vb));
+      }
+    }
+    return { Z: Z, center: [u0, v0], paper: quad(-BW / 2 - m, -BH / 2 - m, BW / 2 + m, BH / 2 + m), tags: tags };
+  }
+
+  function path(pts) {
+    return pts.map(function (q, i) { return (i ? 'L' : 'M') + q[0].toFixed(1) + ' ' + q[1].toFixed(1); }).join('') + 'Z';
+  }
+
+  function svg(p, idx) {
+    var g = geometry(p);
+    var tagsPath = g.tags.slice(1).map(path).join('');
+    var target = '<path class="board" d="' + path(g.paper) + '"/>' +
+      '<path class="tags" d="' + tagsPath + '"/>' +
+      '<path class="tag0" d="' + path(g.tags[0]) + '"/>';
+    var x3 = IMG_W / 3, y3 = IMG_H / 3, c = g.center, a = 34;
+    return '<svg viewBox="' + (-MX) + ' ' + (-MY) + ' ' + (IMG_W + 2 * MX) + ' ' + (IMG_H + 2 * MY) +
+      '" role="img" aria-label="Desenho da pose ' + p.id + '">' +
+      '<defs><clipPath id="clip' + idx + '"><rect x="0" y="0" width="' + IMG_W + '" height="' + IMG_H + '"/></clipPath></defs>' +
+      '<rect class="img-bg" x="0" y="0" width="' + IMG_W + '" height="' + IMG_H + '"/>' +
+      '<g class="img-grid">' +
+      '<line x1="' + x3 + '" y1="0" x2="' + x3 + '" y2="' + IMG_H + '"/>' +
+      '<line x1="' + 2 * x3 + '" y1="0" x2="' + 2 * x3 + '" y2="' + IMG_H + '"/>' +
+      '<line x1="0" y1="' + y3 + '" x2="' + IMG_W + '" y2="' + y3 + '"/>' +
+      '<line x1="0" y1="' + 2 * y3 + '" x2="' + IMG_W + '" y2="' + 2 * y3 + '"/></g>' +
+      '<g class="ghost">' + target + '</g>' +
+      '<g clip-path="url(#clip' + idx + ')">' + target + '</g>' +
+      '<rect class="img-frame" x="0" y="0" width="' + IMG_W + '" height="' + IMG_H + '"/>' +
+      '<path class="aim" d="M' + (c[0] - a) + ' ' + c[1] + 'H' + (c[0] + a) + 'M' + c[0] + ' ' + (c[1] - a) + 'V' + (c[1] + a) + '"/>' +
+      '</svg>';
+  }
+
+  var TAG0_CORNER = { 0: 'inferior esquerdo', 90: 'superior esquerdo', 180: 'superior direito', 270: 'inferior direito' };
+
+  function describe(p) {
+    var parts = p.id.split('-');
+    var lines = [];
+    var head = (DIST[parts[1]] || parts[1]) + ' · ' + (POS[parts[2]] || parts[2]);
+    var g = geometry(p);
+    lines.push('alvo ' + Math.round(p.fraction[0] * 100) + '–' + Math.round(p.fraction[1] * 100) +
+      ' % da largura · ~' + fmt(g.Z / 1000, 2) + ' m');
+    if (p.tilt_h_deg) lines.push('inclinação H ' + signed(p.tilt_h_deg) + '°: borda de ' +
+      (p.tilt_h_deg > 0 ? 'cima' : 'baixo') + ' mais longe');
+    if (p.tilt_v_deg) lines.push('inclinação V ' + signed(p.tilt_v_deg) + '°: borda ' +
+      (p.tilt_v_deg > 0 ? 'direita' : 'esquerda') + ' mais longe');
+    if (p.block === 3 || p.rotation_deg) {
+      var rot = Math.round(p.rotation_deg) % 360;
+      lines.push((rot ? 'girado ' + rot + '° no sentido horário' : 'em pé (0°)') +
+        (TAG0_CORNER[rot] ? ': tag 0 no canto ' + TAG0_CORNER[rot] : ''));
+    }
+    return { head: head, lines: lines };
+  }
+
+  // A pose with the same size, centre and tilts as an earlier one: the dissimilarity filter of the
+  // original tool (position, size and skew) rejects it in a session without the script.
+  var sameAs = {};
+  DATA.poses.forEach(function (p, i) {
+    for (var j = 0; j < i; j++) {
+      var q = DATA.poses[j];
+      if (q.fraction[0] === p.fraction[0] && q.fraction[1] === p.fraction[1] &&
+          q.center[0] === p.center[0] && q.center[1] === p.center[1] &&
+          q.tilt_h_deg === p.tilt_h_deg && q.tilt_v_deg === p.tilt_v_deg) { sameAs[p.id] = q.id; break; }
+    }
+  });
+
+  // ---- state (one list per capture number) ----
+  var KEY = 'roteiro-guia:' + DATA.name;
+  var cap = 1, state = { marks: {}, note: '', mode: 'livre' };
+  function readJSON(k) { try { return JSON.parse(localStorage.getItem(k)); } catch (e) { return null; } }
+  function writeJSON(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* no storage */ } }
+  function loadCapture(n) {
+    cap = n;
+    var s = readJSON(KEY + ':' + n);
+    state = s && s.marks ? s : { marks: {}, note: '', mode: (readJSON(KEY + ':prefs') || {}).mode || 'livre' };
+    writeJSON(KEY + ':prefs', { capture: n, mode: state.mode });
+  }
+  function persist() {
+    state.updated = new Date().toISOString();
+    writeJSON(KEY + ':' + cap, state);
+    writeJSON(KEY + ':prefs', { capture: cap, mode: state.mode });
+  }
+
+  // ---- rendering ----
+  var main = document.getElementById('blocks');
+  function build() {
+    var html = '', idx = 0, byBlock = {};
+    DATA.poses.forEach(function (p) { (byBlock[p.block] = byBlock[p.block] || []).push(p); });
+    Object.keys(byBlock).sort().forEach(function (b) {
+      var meta = BLOCKS[b] || ['Bloco ' + b, ''];
+      html += '<section class="block" data-block="' + b + '"><div class="block-head"><h2>' + meta[0] +
+        '</h2><span class="bc" id="bc' + b + '"></span></div><p class="block-text">' + meta[1] +
+        '</p><div class="grid">';
+      byBlock[b].forEach(function (p) {
+        idx++;
+        var d = describe(p);
+        html += '<article class="card" data-id="' + p.id + '">' +
+          '<div class="card-head"><code>' + p.id + '</code><span class="num">' + idx + '/' + DATA.poses.length +
+          '</span></div>' + svg(p, idx) +
+          '<p class="desc">' + d.head + ' <span class="state-label"></span></p>' +
+          d.lines.map(function (l) { return '<p class="meta">' + l + '</p>'; }).join('') +
+          (sameAs[p.id] ? '<p class="warn" data-free>Sessão livre: mesma posição, tamanho e inclinação de <code>' +
+            sameAs[p.id] + '</code>. O filtro de similaridade da ferramenta tende a recusar.</p>' : '') +
+          '<div class="keys">' +
+          '<button type="button" data-k="s" aria-pressed="false"></button>' +
+          '<button type="button" data-k="o" aria-pressed="false"></button>' +
+          '<button type="button" data-k="k" aria-pressed="false"></button></div>' +
+          '<div class="printbox">☐ salvo &nbsp; ☐ fora/recusado &nbsp; ☐ pulado</div>' +
+          '</article>';
+      });
+      html += '</div></section>';
+    });
+    main.innerHTML = html;
+  }
+
+  function refresh() {
+    var labels = LABELS[state.mode] || LABELS.livre;
+    document.getElementById('mode').value = state.mode;
+    document.getElementById('cap').value = cap;
+    document.getElementById('note').value = state.note || '';
+    var cards = main.querySelectorAll('.card');
+    Array.prototype.forEach.call(cards, function (card) {
+      var m = state.marks[card.getAttribute('data-id')] || '';
+      card.setAttribute('data-state', m);
+      card.querySelector('.state-label').textContent = m ? '· ' + labels[m] : '';
+      Array.prototype.forEach.call(card.querySelectorAll('.keys button'), function (b) {
+        var k = b.getAttribute('data-k');
+        b.textContent = labels[k];
+        b.setAttribute('aria-pressed', String(m === k));
+      });
+      var w = card.querySelector('[data-free]');
+      if (w) w.style.display = state.mode === 'livre' ? '' : 'none';
+    });
+    counts();
+    summary();
+  }
+
+  function tally(list) {
+    var c = { s: 0, o: 0, k: 0, n: 0 };
+    list.forEach(function (p) { var m = state.marks[p.id]; if (m) c[m]++; else c.n++; });
+    return c;
+  }
+  function counts() {
+    var L = LONG[state.mode] || LONG.livre, c = tally(DATA.poses);
+    document.getElementById('counts').innerHTML =
+      '<span class="pill">captura ' + cap + '</span>' +
+      '<span class="pill s">' + L.s + ': ' + c.s + '</span>' +
+      '<span class="pill o">' + L.o + ': ' + c.o + '</span>' +
+      '<span class="pill k">' + L.k + ': ' + c.k + '</span>' +
+      '<span class="pill">pendentes: ' + c.n + '</span>';
+    Object.keys(BLOCKS).forEach(function (b) {
+      var el = document.getElementById('bc' + b);
+      if (!el) return;
+      var list = DATA.poses.filter(function (p) { return String(p.block) === b; });
+      var t = tally(list);
+      el.textContent = (list.length - t.n) + ' de ' + list.length + ' marcadas';
+    });
+  }
+
+  function summaryText() {
+    var L = LONG[state.mode] || LONG.livre, c = tally(DATA.poses);
+    var ids = { s: [], o: [], k: [], n: [] };
+    DATA.poses.forEach(function (p) { ids[state.marks[p.id] || 'n'].push(p.id); });
+    var when = state.updated ? new Date(state.updated).toLocaleString('pt-BR') : '—';
+    var out = [
+      DATA.name + ' · captura ' + cap + ' · ' + (state.mode === 'roteiro' ? 'sessão com roteiro' : 'sessão livre') +
+        ' · última marcação ' + when,
+      L.s + ': ' + c.s + ' · ' + L.o + ': ' + c.o + ' · ' + L.k + ': ' + c.k + ' · pendentes: ' + c.n,
+      L.o + ': ' + (ids.o.join(' ') || '-'),
+      L.k + ': ' + (ids.k.join(' ') || '-'),
+      'pendentes: ' + (ids.n.join(' ') || '-')
+    ];
+    if (state.note) out.push('notas: ' + state.note.replace(/\s*\n\s*/g, ' / '));
+    return out.join('\n');
+  }
+  function summary() { document.getElementById('summary').value = summaryText(); }
+
+  // ---- events ----
+  main.addEventListener('click', function (e) {
+    var b = e.target.closest('.keys button');
+    if (!b) return;
+    var id = b.closest('.card').getAttribute('data-id'), k = b.getAttribute('data-k');
+    if (state.marks[id] === k) delete state.marks[id]; else state.marks[id] = k;
+    persist();
+    refresh();
+  });
+  document.getElementById('cap').addEventListener('change', function (e) {
+    var n = Math.max(1, Math.min(99, parseInt(e.target.value, 10) || 1));
+    loadCapture(n);
+    refresh();
+  });
+  document.getElementById('mode').addEventListener('change', function (e) {
+    state.mode = e.target.value;
+    persist();
+    refresh();
+  });
+  document.getElementById('note').addEventListener('input', function (e) {
+    state.note = e.target.value;
+    persist();
+    summary();
+  });
+  document.getElementById('clear').addEventListener('click', function () {
+    if (!confirm('Apagar as marcações e as notas da captura ' + cap + '?')) return;
+    state = { marks: {}, note: '', mode: state.mode };
+    persist();
+    refresh();
+  });
+  document.getElementById('print').addEventListener('click', function () { window.print(); });
+  document.getElementById('download').addEventListener('click', function () {
+    var blob = new Blob([summaryText() + '\n'], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'roteiro_captura_' + String(cap).padStart(2, '0') + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 0);
+  });
+  document.getElementById('copy').addEventListener('click', function () {
+    var ta = document.getElementById('summary');
+    var done = function () { document.getElementById('copy').textContent = 'Copiado'; setTimeout(function () { document.getElementById('copy').textContent = 'Copiar resumo'; }, 1500); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(ta.value).then(done, function () { ta.select(); document.execCommand('copy'); done(); });
+    } else { ta.select(); document.execCommand('copy'); done(); }
+  });
+
+  // ---- start ----
+  document.getElementById('name').textContent = DATA.name;
+  document.getElementById('total').textContent = DATA.poses.length;
+  document.getElementById('src').textContent = 'config/' + DATA.source;
+  document.getElementById('board-mm').textContent = Math.round(BW);
+  document.getElementById('target-desc').textContent = T.tagCols + '×' + T.tagRows + ' tags de ' +
+    Math.round(TAG) + ' mm (' + Math.round(BW) + ' × ' + Math.round(BH) + ' mm)';
+  build();
+  loadCapture((readJSON(KEY + ':prefs') || {}).capture || 1);
+  refresh();
+})();
+</script>
+</body>
+</html>
