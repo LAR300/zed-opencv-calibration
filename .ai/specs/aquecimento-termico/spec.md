@@ -54,8 +54,8 @@ com efeito de condição.
 
 > Validação: ver as etapas de [`plan.md`](plan.md), registro de 2026-11-04.
 
-- [ ] `--timelapse 30 60` grava 120 pares, com timestamps espaçados 30 ± 1 s e temperaturas no
-      `meta.json`.
+- [x] `--timelapse 30 60` grava 120 pares, com timestamps espaçados 30 ± 1 s e temperaturas no
+      `meta.json` (2026-11-10: 29,94–30,07 s, temperatura em todos os pares).
 - [x] Com dados sintéticos (pose com deriva exponencial de constante conhecida mais ruído), o
       critério de R3 encontra o instante de regime com erro < 1 janela — em 94,5 % das
       repetições (plan, etapa 3).

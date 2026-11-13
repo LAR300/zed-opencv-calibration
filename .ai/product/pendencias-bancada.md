@@ -44,6 +44,14 @@
       batem com o que se vê (sinais das inclinações e da rotação).
 - [ ] **Captura completa das 63 poses** (plan, etapa 6), com o tempo, a revisão das tolerâncias
       e a decisão sobre a faixa "perto" (plan, riscos); depois o guia de bancada (etapa 7).
+      - **2026-11-10, não concluída:** com o alvo do laboratório, nenhuma pose salva no modo
+        roteiro. A imobilidade não fechou nem com 0,5 px (veja captura-estatica). A
+        `dados/ensaio_A/captura_01` tem as 63 poses puladas com `k` e está marcada `REPROVADA`.
+        No lugar dela, duas capturas em sessão livre guiadas por `config/roteiro_v1_guia.html`
+        (`dados/ensaio_A_livre/captura_01..02`, 41 e 42 pares), ambas aceitas: cobertura
+        aprovada, RMS estéreo 0,396 e 0,407 px. Comentário em
+        `calib_runs/dados/analises/ensaio_A_livre/report_comentado.md`. Os sinais das
+        inclinações no painel continuam sem conferência.
 
 ## captura-estatica
 
@@ -54,8 +62,43 @@
         fixos (`--camera_settings`), deslocamento p50 0,32 px e p95 0,50 px, nitidez mínima
         proposta 1428; com a exposição automática, p50 0,52 e p95 0,78 px. Falta medir com o alvo
         do laboratório nas três distâncias.
+      - **Medido em 2026-11-10** com o alvo do laboratório, câmera aquecida, controles fixos
+        (`calib_runs/dados/ruido/captura_01..03` = L ~1,2 m, M ~0,6 m, P ~0,4 m; comentado em
+        `calib_runs/dados/analises/ruido_estatico/report_comentado.md`). Deslocamento p95:
+        0,028 / 0,019 / 0,048 px. Nitidez p05 (esquerda): 6688 / 2767 / 1516, porque a medida
+        cai com a proximidade. Pior caso (P) em `sessao_ensaio_A.yaml`: 0,145 px (3 × p95) e 757
+        (0,5 × p05), janela de 1,0 s. Falta o `config/session_example.yaml`, depois do ensaio.
+- [ ] **Corrigir a proposta do `noise.json`:** a ferramenta propõe `max_displacement_px` =
+      1 × p95, mas o spec (condições de implementação) diz 3 × p95, e o plan, etapa 4, descreve
+      1× como se fosse a regra do spec. Ajustar `proposeThresholds`, o teste e o plan.
+- [ ] **A nitidez mínima depende da distância** (2026-11-10: ~6700 em L e ~1500 em P, com o alvo
+      parado). Um limiar único, o de P, fica frouxo em L. Avaliar a normalização pelo tamanho
+      das tags em pixels, depois do ensaio.
 - [ ] **Integração na coleta com o alvo** (plan, etapa 5): no modo roteiro, o bloqueio do `s`
       até a imobilidade, com os limiares medidos na etapa 4.
+      - **2026-11-10:** com 0,145 px e depois com 0,5 px, o operador não conseguiu fechar a janela
+        de 1 s. A causa não foi diagnosticada. Hipóteses:
+        - vibração real do conjunto (tripé, alvo encostado);
+        - o RMS dos cantos não ser robusto: um único canto instável, por exemplo de uma tag cortada
+          na borda nas poses P, levanta o RMS e reinicia a janela.
+
+        Próximo passo: ler o "moving (x px)" do painel com tudo parado. Se aparecerem picos
+        isolados, trocar o RMS pela mediana em `StabilityTracker::update`. O limiar sai do
+        orçamento de erro (deformação ≤ d no pior caso) ou da relação erro por vista ×
+        deslocamento numa captura com limiar folgado.
+- [ ] **Par aceito ao vivo e perdido na releitura:** em todas as 5 capturas livres
+      (`dados/ensaio_A_livre`), 1 ou 2 pares foram salvos com ≥ 12 tags ao vivo e, relidos do
+      PNG, deram 10 ou 11 tags: captura_01 #31, 02 #32, 03 #32, 04 #27, 05 #30 e #65. A causa não
+      foi investigada: a detecção ao vivo e a do arquivo salvo divergem perto do mínimo de 12. Hoje
+      a calibração só descarta o par.
+- [ ] **Vista `free_1` removida como outlier** nas capturas livres 04 e 05, com RMS de 1,26–1,27 px
+      contra o limiar de ~0,84. A 03 removeu outras vistas (`free_30`, `free_61`). Ver se é sempre a
+      mesma pose do guia e por quê: canto da imagem, movimento sem o filtro de imobilidade?
+- [ ] **Filtro de similaridade satura na sessão livre** (2026-11-12, captura_05 com
+      `--min_samples 200`): depois de 75 pares, 31 `s` seguidos foram recusados por "similar".
+      É o filtro original: uma amostra nova é recusada se |Δx| + |Δy| + |Δsize| + |Δskew| < 0,15
+      em relação a qualquer amostra salva. Não há teto de amostras. Se for preciso coletar mais,
+      avaliar uma opção para relaxar ou desligar o filtro na sessão livre.
 
 ## cobertura
 
@@ -75,11 +118,20 @@
 
 ## aquecimento-termico
 
-- [ ] **`--timelapse 30 60` com o alvo** (plan, etapa 1): 120 pares espaçados 30 ± 1 s, com as
-      temperaturas no `meta.json`. Sem o alvo, o modo já foi exercitado ao vivo.
+- [x] **`--timelapse 30 60` com o alvo** (plan, etapa 1): 120 pares espaçados 30 ± 1 s, com as
+      temperaturas no `meta.json`. Sem o alvo, o modo já foi exercitado ao vivo. Feito em
+      2026-11-10 (dia 1, `calib_runs/dados/termico/captura_01`): 120 pares, espaçamento
+      29,94–30,07 s, temperatura em todos.
 - [ ] **Três registros a frio** em dias diferentes (plan, etapa 4), câmera desligada há ≥ 2 h,
       controles manuais (`--camera_settings`), luz fixa; depois `zedcal.thermal_command` e o X
-      proposto para aprovação.
+      proposto para aprovação. **Dia 1 (2026-11-10, 11:06–12:06, alvo a ~0,91 m):** sem regime
+      em 60 min (`calib_runs/dados/analises/termico_dia1/`). A temperatura (ONBOARD_LEFT) subiu
+      de 26,8 °C para 32,4 °C, ainda +0,25 °C nos últimos 20 min. A transferência estéreo, que
+      não depende de movimento rígido, assentou o RMS aos 22 min e o dy aos 4 min; o dx (deriva
+      de disparidade) desceu 0,04 px até o fim, ~0,5 mm em 0,91 m com F. A pose deriva até o fim
+      (ry +0,20°, tx −0,5 mm), mas o alvo estava só encostado na parede: a pose não separa a
+      câmera do alvo escorregando (degrau em rx aos ~8,5 min). Próximos registros: alvo
+      preso; decidir se ficam com 90–120 min.
 
 ## ambiente-sensores
 
