@@ -4,6 +4,7 @@
 #include <regex>
 #include <sstream>
 
+#include "json_write.hpp"
 #include "meta_io.hpp"
 #include "test_utils.hpp"
 
@@ -206,6 +207,27 @@ TEST(meta_records_schema_and_settings) {
   CHECK(contains(text, "\"serial\": 35180697"));
   CHECK(contains(text, "\"EXPOSURE\": 50"));
   CHECK(contains(text, "\"end_reason\": \"all metrics complete\""));
+}
+
+TEST(meta_writes_single_quotes_as_valid_json) {
+  // FileStorage escapes ' as \', which JSON does not accept
+  CaptureMeta m = sampleMeta();
+  m.end_reason = "ended by the user ('f')";
+  m.session.note = "a\\'b";  // a backslash right before a quote
+  const fs::path path = freshFile("meta.json");
+  std::string error;
+  CHECK(writeCaptureMeta(path.string(), m, error));
+  const std::string text = readAll(path);
+  CHECK(contains(text, "\"end_reason\": \"ended by the user ('f')\""));
+  CHECK(contains(text, "\"note\": \"a\\\\'b\""));
+  CHECK(!contains(text, "(\\'"));
+}
+
+TEST(json_unescape_single_quotes_keeps_other_escapes) {
+  CHECK(json_write::unescapeSingleQuotes("\"x\\'y\"") == "\"x'y\"");
+  CHECK(json_write::unescapeSingleQuotes("\"x\\\\\\'y\"") == "\"x\\\\'y\"");
+  CHECK(json_write::unescapeSingleQuotes("\"x\\\\y\\\"z\\n\"") == "\"x\\\\y\\\"z\\n\"");
+  CHECK(json_write::unescapeSingleQuotes("\"x\\\\\"") == "\"x\\\\\"");
 }
 
 TEST(meta_text_values_cannot_inject_markers) {

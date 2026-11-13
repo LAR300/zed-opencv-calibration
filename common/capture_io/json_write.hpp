@@ -49,8 +49,26 @@ inline void replaceAll(std::string& text, const std::string& from, const std::st
     text.replace(pos, from.size(), to);
 }
 
+// FileStorage escapes ' as \' inside strings, which is not valid JSON. Every
+// backslash it writes starts a two-character escape (\\, \", \', \n, ...), so
+// a scan that copies escapes in pairs drops only the backslash of \'.
+inline std::string unescapeSingleQuotes(const std::string& text) {
+  std::string out;
+  out.reserve(text.size());
+  for (size_t i = 0; i < text.size(); ++i) {
+    if (text[i] == '\\' && i + 1 < text.size()) {
+      if (text[i + 1] != '\'') out += '\\';
+      out += text[++i];
+    } else {
+      out += text[i];
+    }
+  }
+  return out;
+}
+
 // Replace the markers and write the text through '<path>.tmp' and a rename
 inline bool finishJson(std::string text, const std::string& path, std::string& error) {
+  text = unescapeSingleQuotes(text);
   replaceAll(text, "\"" + kNull + "\"", "null");
   replaceAll(text, "\"" + kTrue + "\"", "true");
   replaceAll(text, "\"" + kFalse + "\"", "false");
