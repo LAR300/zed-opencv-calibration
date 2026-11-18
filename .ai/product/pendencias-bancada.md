@@ -113,6 +113,11 @@
       `checkMetricTargetMeasured` ao abrir a sessão métrica.
 - [ ] **Sessão métrica real** (plan, etapa 5): rodar `zedcal.metric_test_command` com F e uma
       calibração existente.
+      - **2026-11-13:** é o que decide a profundidade longe. Contra F, as nossas calibrações (AprilGrid
+        e xadrez) têm deslocamento de disparidade de +0,1 a +0,2 px e, as AprilGrid, escala ~0,6 %
+        diferente: −0,5 % a 3 m. Afastar o alvo 1, 2 e 3 m medidos com trena (diferenças de
+        distância, sem depender do centro óptico) basta. Uma versão em sessão livre dispensa o modo
+        roteiro (relatório final das 9 capturas livres, seção 6.6).
 - [ ] **Perguntas do spec ao usuário:** instrumento e ponto de referência da distância, distância
       mínima, instrumento da planicidade.
 
@@ -150,3 +155,13 @@
       externa das tags): o offline prevê o eixo Y do alvo ~0,23 % (~1,5 mm em 660 mm) maior que o
       X, em relação à grade nominal.
 - [ ] **Planicidade** do alvo (já pedida em `validacao-metrica` R4).
+- [ ] **Alvo apoiado numa base plana e rígida** (MDF, vidro ou chapa), sem segurar pelas bordas:
+      repetir 2–3 capturas e comparar fx e fy com o xadrez e com F. Em 2026-11-13, mesmo com o
+      alvo corrigido (esticamento + mapa por canto), as focais ficaram ~0,3 % acima de F, enquanto o
+      xadrez fica a ~0,1 %. A hipótese é o painel empenado (relatório final das 9 capturas livres,
+      seção 8.2: `calib_runs/dados/analises/ensaio_A_livre/relatorio_final/relatorio.md`).
+- [ ] **Captura com o alvo girado 90° em metade das vistas** (bloco 3 do roteiro): é o que separa
+      o esticamento do alvo do fy/fx sem instrumento. Nas 9 capturas livres só 5 de 626 vistas têm
+      o alvo girado, e a estimativa só pelos dados variou de −0,4 a +0,8 %. Hoje o filtro de
+      similaridade recusa essas vistas: precisa da opção para relaxá-lo na sessão livre, ou do modo
+      roteiro funcionando (relatório final, seção 8.1).
